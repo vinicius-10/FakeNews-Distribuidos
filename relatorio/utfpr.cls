@@ -1438,16 +1438,8 @@
   }
 }
 
-%% Sumário
-\settocpreprocessor{part}{%% Título da parte no sumário em letras maíusculas
-  \let\tempf@rtoc\f@rtoc\def\f@rtoc{\texorpdfstring{\MakeTextUppercase{\tempf@rtoc}}{\tempf@rtoc}}%%
-}
-\settocpreprocessor{chapter}{%% Título do capítulo no sumário em letras maíusculas
-  %\let\tempf@rtoc\f@rtoc\def\f@rtoc{\texorpdfstring{\MakeTextUppercase{\tempf@rtoc}}{\tempf@rtoc}}%%
-  \let\tempf@rtoc\f@rtoc\def\f@rtoc{\texorpdfstring{\MakeTextUppercase{\tempf@rtoc}}{\tempf@rtoc}}%%
-}
-
-%% luiz : TODO - fazer só a primeira letra maiúscula e o resto minusculo automático - tentei mas perdeu a formatação, sugestão: https://tex.stackexchange.com/questions/380500/first-letter-upper-case-and-other-letters-in-lower-case
+%% Sumário: a CAIXA ALTA dos capítulos vem do abntex2 (opções sumario=abnt-6027-2012 e
+%% chapter=TITLE). A v3.0 repetia isso aqui com \settocpreprocessor (obsoleto no memoir) — removido.
 
 
 \let\oldcontentsline\contentsline%% Título da seção no sumário em letras maíusculas
@@ -1695,31 +1687,36 @@
 % Command to underline the text
 \newcommand{\underln}[1]{$\underline{\text{#1}}$}
 
-\usepackage{mfirstuc} % load the mfirstuc package
-\DeclareRobustCommand{\xmakefirstuc}[1]{\makefirstuc{#1}} % define the \xmakefirstuc command
 
  \renewcommand*{\l@section}[2]
- {% luiz - o xmakefirstuc está funcionando, todavia a primeira coisa que vem é o número... e depois o texto, então ele não deixa a primeira letra maiúscula por causa disso... tem que ver como resolver
-     \l@chapapp{\ABNTEXsectionfont\xmakefirstuc{#1}}{#2}{\cftsectionname}
+ {% Seção secundária no sumário, formatada como o capítulo (\l@chapapp) com a fonte das
+  % seções. O grupo zera o \cftchapteraftersnum: nos apêndices o abntex2 põe " – " depois do
+  % número do capítulo, e sem isso a seção saía "A.1–Título" (colado e com overfull).
+  % (A v3.0 aplicava \xmakefirstuc aqui; não tinha efeito, pois o número vem antes do
+  % título, e quebrava a compilação no TeX Live 2021 — removido.)
+     {\renewcommand*{\cftchapteraftersnum}{}%
+      \l@chapapp{\ABNTEXsectionfont #1}{#2}{\cftsectionname}}%
  }
  
  \renewcommand{\cftdotsep}{0.8}
-% Redefinição do título da \subsubsection para remover indentação
+% Título da seção quaternária (\subsubsection) no padrão UTFPR: sem recuo e só o título
+% sublinhado (o número não). Feito com titlesec; o memoir avisa que não recomenda o pacote,
+% mas o estilo nativo do memoir recua o título e sublinha também o número (testado).
 \RequirePackage{titlesec}
-\RequirePackage[normalem]{ulem} 
-\RequirePackage{tikz}% habilita \uline
+\RequirePackage[normalem]{ulem}%% \uline (sublinhado)
+\RequirePackage{tikz}
 
 \titleformat{\subsubsection}
   [block]
   {\normalfont\normalsize}
   {\thesubsubsection}
   {1em}
-  {\uline}  % <-- sublinha apenas o conteúdo do título
+  {\uline}%% sublinha só o título
 
 \titlespacing*{\subsubsection}
-  {0pt}                                   % sem indentação à esquerda
-  {3.25ex plus 1ex minus .2ex}            % espaço acima
-  {1.5ex plus .2ex}                       % espaço abaixo
+  {0pt}%% sem recuo à esquerda
+  {3.25ex plus 1ex minus .2ex}%% espaço acima
+  {1.5ex plus .2ex}%% espaço abaixo
 
   
 %Vinicius Dias
