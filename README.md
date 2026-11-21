@@ -119,10 +119,19 @@ O relatório técnico é escrito no Overleaf com o modelo LaTeX da UTFPR, e uma 
 O uso de ferramentas de IA generativa como apoio é registrado no apêndice do relatório, como exige a disciplina.
 
 ## 👥 Equipe
+**Arthur Henrique Jardim**
+
+[![GitHub](https://img.shields.io/badge/GitHub-arthur--hj-181717?logo=github&logoColor=white)](https://github.com/arthur-hj)
+
+**João Alberto Benassi Torezan**
+
+[![GitHub](https://img.shields.io/badge/GitHub-k7vinilstorage-181717?logo=github&logoColor=white)](https://github.com/k7vinilstorage)
+
+**Rafael Munhoz Castro**
+
+[![GitHub](https://img.shields.io/badge/GitHub-RafinhaW74-181717?logo=github&logoColor=white)](https://github.com/RafinhaW74)
+
 **Vinicius Souza Dias**
-Engenharia de Computação, UTFPR
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-vinicius--dias--dev-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/vinicius-dias-dev/)
 [![GitHub](https://img.shields.io/badge/GitHub-vinicius--10-181717?logo=github&logoColor=white)](https://github.com/vinicius-10)
-
-*Demais integrantes: a completar.*
