@@ -1,5 +1,5 @@
 %% =============================================================================
-%% variaveis.tex — dados da capa, folha de rosto, resumo e abstract
+%% variaveis.tex — dados da capa, folha de rosto e resumo
 %% Texto em vermelho (\textcolor{red}{...}) = pendente: trocar antes da entrega.
 %% =============================================================================
 
@@ -12,8 +12,8 @@
 \TipoDeDocumento{Trabalho de Conclusão de Curso de Graduação}
 \NivelDeFormacao{Bacharelado}
 
-%% Curso
-\program{\textcolor{red}{Bacharelado em Ciência da Computação}}
+%% Curso (não aparece no relatório: a folha de rosto cita só a disciplina)
+\program{}
 \programen{Undergradute Program in Computer Science}
 \degree{Bacharel}
 \degreearea{}
@@ -25,23 +25,24 @@
 \makeatletter
 \goalfulltext{%
   \begin{Spacing}{0.8}
-    \@goal{} como requisito parcial de avaliação da disciplina de
-    \@course{} do \@program{} da \@university{}.
+    \@goal{} à disciplina de \@course{} da \@university{}
+    como trabalho final.
   \end{Spacing}
 }
 \makeatother
 
-%% Autores (um \addauthor por integrante)
-\addauthor{\textcolor{red}{Integrante 1}}
-\addauthor{\textcolor{red}{Integrante 2}}
-\addauthor{\textcolor{red}{Integrante 3}}
+%% Autores (um \addauthor por integrante, em ordem alfabética)
+\addauthor{Arthur Henrique Jardim da Cunha Pinto}
+\addauthor{João Alberto Benassi Torezan}
+\addauthor{Rafael Munhoz Castro}
+\addauthor{Vinicius Souza Dias}
 
 %% Forma de citar este trabalho: SOBRENOME, Nome (ou SOBRENOME et al., se mais de 3 autores)
-\authorbib{\textcolor{red}{SOBRENOME, Nome et al.}}
+\authorbib{PINTO, Arthur Henrique Jardim da Cunha et al.}
 
-%% Título (capa e folha de rosto) e título em inglês
+%% Título (capa e folha de rosto). Sem título em inglês: \titleen vazio não imprime nada.
 \title{Propagação de fake news em sistemas paralelos e distribuídos: simulação por autômato celular com threads e sockets}
-\titleen{Fake news propagation in parallel and distributed systems: cellular automaton simulation with threads and sockets}
+\titleen{}
 
 %% Ano (capa e folha de rosto)
 \depositshortdate{2026}
@@ -57,7 +58,7 @@
 \documenttypeen{Technical Report}
 \degreetype{Graduação}
 
-%% Palavras-chave (resumo) e keywords (abstract): informe a quantidade (máximo 5);
+%% Palavras-chave do resumo: informe a quantidade (máximo 5);
 %% a classe cuida da pontuação. Use os comandos de acento do LaTeX (\'a, \^o, \~a, \c{c}).
 \NumeroDePalavrasChave{4}
 \PalavraChaveA{aut\^omatos celulares}
@@ -65,13 +66,6 @@
 \PalavraChaveC{sistemas distribu\'idos}
 \PalavraChaveD{propaga\c{c}\~ao de desinforma\c{c}\~ao}
 %\PalavraChaveE{...}
-
-\NumeroDeKeywords{4}
-\KeywordA{cellular automata}
-\KeywordB{parallel computing}
-\KeywordC{distributed systems}
-\KeywordD{misinformation spread}
-%\KeywordE{...}
 
 %% Licença Creative Commons: exigida só em TCC entregue à biblioteca. Vazio = sem licença.
 %% Opções: ccby, ccbysa, ccbynd, ccbync, ccbyncsa, ccbyncnd (imagens em PreTexto/arquivos/licencasCC).

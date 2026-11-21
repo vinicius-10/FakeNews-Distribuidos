@@ -20,7 +20,7 @@ Relatório do trabalho final de Sistemas Distribuídos, escrito no modelo LaTeX 
 | `configuracoes.tex` | pacotes e comandos adicionais (`\todo`, listagens de código, `\caixa`) |
 | `utfpr.cls` | classe do modelo (formatação ABNT/UTFPR) — evite editar |
 | `capitulos/` | seções do relatório (uma por arquivo) |
-| `PreTexto/` | resumo, abstract, lista de siglas (`lista-acronimos.tex`) |
+| `PreTexto/` | resumo, lista de siglas (`lista-acronimos.tex`) |
 | `PosTexto/` | apêndices |
 | `figuras/` | imagens das figuras (`\includegraphics{nome}`) |
 | `main.bib` | referências (BibTeX, estilo `abntex2-alf.bst`) |
@@ -45,6 +45,8 @@ Convenções: siglas com `\ac{SIGLA}` (só as usadas entram na lista); fonte de 
 - Removidos os arquivos de exemplo do modelo (capítulos, figuras, apêndices, logos de outros
   programas, folha de aprovação) e os elementos de TCC que não se aplicam (dedicatória,
   agradecimentos, epígrafe, errata, banca). Ficam recuperáveis pelo histórico do Overleaf.
+- Sem abstract e sem título em inglês (não exigidos neste relatório): `PreTexto/abstract.tex`
+  apagado e `\titleen{}` vazio. A folha de rosto cita só a disciplina, sem o curso.
 
 ## Avisos esperados na compilação
 
