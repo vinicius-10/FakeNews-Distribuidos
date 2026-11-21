@@ -20,6 +20,7 @@
 - [Tecnologias Utilizadas](#-tecnologias-utilizadas)
 - [Estrutura do Projeto](#-estrutura-do-projeto)
 - [Como Executar](#-como-executar)
+- [Como Contribuir](#-como-contribuir)
 - [Relatório](#-relatório)
 - [Equipe](#-equipe)
 
@@ -95,6 +96,9 @@ A grade inicial é sorteada com semente fixa e as regras são determinísticas, 
 │   ├── capitulos/                        # Seções do relatório
 │   ├── PreTexto/ e PosTexto/             # Resumo, siglas e apêndices
 │   └── readme.md                         # Como compilar e mudanças no modelo UTFPR
+├── .github/
+│   └── pull_request_template.md          # Modelo de descrição dos pull requests
+├── CONTRIBUTING.md                       # Guia de contribuição do grupo
 └── README.md
 ```
 
@@ -112,6 +116,9 @@ As pastas das versões paralela e distribuída, dos testes e dos experimentos se
    python sequencial/fakenews_sequencial_original.py
    ```
    Os parâmetros (tamanho da grade, gerações, percentual inicial de espalhadores e limiar) ficam no fim do arquivo, na chamada de `executar_simulacao`.
+
+## 🤝 Como Contribuir
+Antes de contribuir, leia o [guia de contribuição](CONTRIBUTING.md): fluxo de *branches* e *pull requests*, padrão de commits, regras para o código rodar no Windows e no Linux, testes, experimentos e como referenciar o uso de IA.
 
 ## 📄 Relatório
 O relatório técnico é escrito no Overleaf com o modelo LaTeX da UTFPR, e uma cópia é mantida em `relatorio/`. Para compilar localmente: pdfLaTeX + BibTeX + makeglossaries (por exemplo, `latexmk -pdf main.tex` dentro de `relatorio/`). Detalhes em [`relatorio/readme.md`](relatorio/readme.md).
