@@ -1,0 +1,33 @@
+%%%% CAPÍTULO 3 - MODELO COMPUTACIONAL E VERSÃO SEQUENCIAL
+
+\chapter{Modelo computacional e versão sequencial}\label{cap:sequencial}
+
+\section{Descrição do problema}
+
+A população é representada por uma matriz de $L \times C$ células. Cada célula assume um dos estados:
+
+\begin{itemize}
+    \item \textbf{Ignorante (0)}: ainda não recebeu ou não acredita na informação;
+    \item \textbf{Espalhador (1)}: acredita e compartilha a informação;
+    \item \textbf{Inativo (2)}: recebeu a informação, mas não a compartilha mais.
+\end{itemize}
+
+\section{Regras de transição}
+
+A cada geração, o novo estado de cada célula é calculado a partir da geração anterior:
+
+\begin{itemize}
+    \item um ignorante torna-se espalhador se possuir pelo menos $\lambda$ vizinhos espalhadores (limiar de convencimento);
+    \item um espalhador torna-se inativo na geração seguinte;
+    \item um inativo permanece inativo.
+\end{itemize}
+
+As bordas da matriz são fixas (sem continuidade toroidal): células da borda possuem menos de oito vizinhos. A grade inicial é gerada com semente fixa, e as regras de transição são determinísticas; portanto, para os mesmos parâmetros, a evolução é sempre a mesma. Essa propriedade é usada para verificar a correção das versões paralela e distribuída.
+
+\section{Funcionamento da implementação sequencial}
+
+\todo{Fluxograma; funções \texttt{criar\_grade}, \texttt{contar\_vizinhos\_espalhadores}, \texttt{proxima\_geracao}, \texttt{contar\_estados}; uso de nova matriz por geração para evitar atualização ``ao vivo''.}
+
+\section{Análise de custo}
+
+\todo{Complexidade $O(L \cdot C)$ por geração; custo do \texttt{deepcopy}; parada antecipada quando não há espalhadores; sensibilidade ao limiar (com $\lambda=3$ a propagação termina em poucas gerações).}

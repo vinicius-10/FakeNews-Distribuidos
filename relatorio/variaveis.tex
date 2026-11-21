@@ -1,0 +1,147 @@
+
+%% Documento
+%% Luiz: Define a fonte do texto da monografia
+\fonteTexto{\sfdefault} % utilize \rmdefault para Times New Roman ou \sfdefault para Arial
+\TipoDeDocumento{Trabalho de Conclusão de Curso de Graduação}%% Tipo de documento: "Tese", "Dissertação" ou "Trabalho de Conclusão de Curso de Graduação", "Estágio Supervisionado"
+\NivelDeFormacao{Bacharelado}%% Nível de formação: "Doutorado", "Mestrado", "Bacharelado" ou "Tecnólogo" - ATENÇÃO, isso será utilizado para alterar a formatação do trabalho, pois pode haver formatações distintas dependendo o nível/tipo de trabalho.
+
+
+% Dados do curso. Caso seja BCC:
+\program{\textcolor{red}{Bacharelado em Ciência da Computação}}
+\programen{Undergradute Program in Computer Science}
+\degree{Bacharel}
+\degreearea{}
+% Caso seja TSI:
+% \program{Curso Superior de Tecnologia em Sistemas para Internet}
+% \programen{Undergradute Program in Tecnology for Internet Systems}
+% \degree{Tecnólogo}
+% \degreearea{Tecnologia em Sistemas para Internet}
+
+
+% Dados da disciplina. Escolha uma das opções e a descomente:
+% TCC1:
+%\goal{Proposta de Trabalho de Conclusão de Curso de Graduação}
+%\course{Trabalho de Conclusão de Curso 1}
+% TCC2:
+
+
+ \goal{Relatório técnico apresentado}
+ \course{Sistemas Distribuídos}
+
+
+% Nomes
+\addauthor{\textcolor{red}{Integrante 1}}
+\addauthor{\textcolor{red}{Integrante 2}}
+\addauthor{\textcolor{red}{Integrante 3}}
+%\addauthor{AutorN} 
+
+%formato que será utilizado para citar esse trabalho
+\authorbib{\textcolor{red}{SOBRENOME, Nome et al.}} %(SOBRENOME, Nome) ou (SOBRENOME et al.) se mais de 3 autores
+
+\title{Propagação de fake news em sistemas paralelos e distribuídos: simulação por autômato celular com threads e sockets} % Título do trabalho
+
+
+%Nota do titulo: O título do trabalho constante na capa, na folha de rosto e na folha de aprovação deve ser idêntico ao registrado no Sistema Acadêmico.\\ (todo o texto destacado em vermelho deverá ser substituído e/ou excluído para a versão final)
+
+
+%Nota da folha de aprovação: Este é um modelo de folha de aprovação destinado para os TCCs e TCCEs. Para dissertações e teses, a folha de aprovação deverá ser gerada pelo Sistema Acadêmico e inserida na versão final como texto (não inserir como imagem
+
+
+%texto da natureza do trabalho - Para TCC não alterar
+\makeatletter
+
+\goalfulltext{
+    \begin{Spacing}{0.8}
+        \@goal{} como requisito parcial de avaliação da disciplina de
+        \@course{} do \@program{} da \@university{}.
+    \end{Spacing}
+}
+
+\makeatother
+
+\titleen{Fake news propagation in parallel and distributed systems: cellular automaton simulation with threads and sockets} % Título traduzido para inglês
+
+
+% Se não houver orientador, comente a linha a baixo
+%\advisor{Nome completo e por extenso.} % (comando não existe nesta classe; manter comentado) Nome do orientador. Lembre-se de prefixar com "Prof. Dr.", "Profª. Drª.", "Prof. Me." ou "Profª. Me."
+
+% Se não houver corientador, comente a linha a baixo
+%\coadvisor{Nome completo e por extenso.} % Nome do coorientador, caso exista. Caso não exista, comente a linha.
+
+
+
+\depositshortdate{2026} % Ano em que depositou este documento
+\approvaldate{\textcolor{red}{dia / mês por extenso / ano}}
+
+% Dados do curso que não precisam de alteração
+\university{Universidade Tecnológica Federal do Paraná}
+\universityen{Federal University of Technology -- Paraná}
+\universitycampus{Campus Cornélio Procópio}
+\universityunit{Departamento Acadêmico de Computação}
+\address{Cornélio Procópio}
+\addressen{Campus Cornélio Procópio, PR, Brazil}
+\documenttype{Relatório Técnico}
+\documenttypeen{Technical Report}
+\degreetype{Graduação}
+
+\evalboardmember{Nome completo e por extenso do Membro 1 (de acordo com o Currículo Lattes)
+}{Titulação (Especialização, Mestrado, Doutorado)}{Nome completo e por extenso da instituição a qual possui vínculo}
+\evalboardmember{Nome completo e por extenso do Membro 2 (de acordo com o Currículo Lattes)
+}{Titulação (Especialização, Mestrado, Doutorado)}{Nome completo e por extenso da instituição a qual possui vínculo}
+\evalboardmember{Nome completo e por extenso do Membro 3 (de acordo com o Currículo Lattes)}{Título (Titulação (Especialização, Mestrado, Doutorado)}{Nome completo e por extenso da instituição a qual possui vínculo}
+%\evalboardmember{Nome completo e por extenso do Membro 4 (de acordo com o Currículo Lattes)}{Titulação (Especialização, Mestrado, Doutorado)}{Nome completo e por extenso da instituição a qual possui vínculo}
+
+
+%% Palavras-chave e keywords
+%% ATENÇÃO - você deve indicar a quantidade de palavras chaves para o template LaTeX utilizar o pontuação correta!
+\NumeroDePalavrasChave{4}%% Número de palavras-chave (máximo 5)
+%% Atenção - por enquanto o template não está suportando acentos normais na palavra chave, por isso caso a palavra tenha acento, você deve utilizar o estilo antigo do LaTeX, sendo os acentos: á - \'a  é - \'e   â - \^a  ê - \^e  à - \`a  ä - \"a  ç - \c{c}
+\PalavraChaveA{aut\^omatos celulares}%% Palavra-chave A
+\PalavraChaveB{computa\c{c}\~ao paralela}%% Palavra-chave B
+\PalavraChaveC{sistemas distribu\'idos}%% Palavra-chave C
+\PalavraChaveD{propaga\c{c}\~ao de desinforma\c{c}\~ao}%% Palavra-chave D
+%\PalavraChaveE{Palavra-chave 5}%% Palavra-chave E
+%% Exemplo de como utilizar acentos na Palavra-chave:
+% \PalavraChaveA{ol\'a}%% Olá
+%\PalavraChaveB{voc\^e}%% você
+%\PalavraChaveC{\`a}%% à
+%\PalavraChaveD{a\c{c}\~ao}%% ação
+%\PalavraChaveE{arg\"uir}%% argüir
+
+
+%% ATENÇÃO - você deve indicar a quantidade de keywords para o template LaTeX utilizar o pontuação correta!
+\NumeroDeKeywords{4}%% Número de keywords (máximo 5)
+\KeywordA{cellular automata}%% Keyword A
+\KeywordB{parallel computing}%% Keyword B
+\KeywordC{distributed systems}%% Keyword C
+\KeywordD{misinformation spread}%% Keyword D
+%\KeywordE{Keyword 5}%% Keyword E
+
+
+% É obrigatório o uso de uma licença Creative Commons (CC) nos trabalhos de TCC pelos cursos ligados a DACOM da UTFPR-CM.
+% Veja: http://portal.utfpr.edu.br/biblioteca/trabalhos-academicos/docentes/procedimento-de-entrega-graduacao
+
+% Sendo assim, escolha com o seu orientador uma das licenças CC a seguir: 
+
+% CC BY: Esta licença permite que outros distribuam, remixem, adaptem e criem a partir deste trabalho, mesmo para fins comerciais, desde que atribuam o devido crédito pela criação original. Essa é a menos restritiva.
+%\licenca{ccby}
+
+% CC BY CA: Esta licença permite que outros remixem, adaptem e criem a partir deste trabalho, mesmo para fins comerciais, desde que atribuam o devido crédito e que licenciem as novas criações sob termos idênticos.
+%\licenca{ccbysa}
+
+% CC BY ND: Esta licença permite a redistribuição, comercial e não comercial, desde que o trabalho seja distribuído inalterado e no seu todo, com crédito ao autor.
+%\licenca{ccbynd}
+
+% CC BY NC: Esta licença permite que outros remixem, adaptem e criem a partir deste trabalho para fins não comerciais, e embora os novos trabalhos tenham de atribuir o devido crédito e não possam ser usados para fins comerciais, os trabalhos derivados não têm que serem licenciados sob os mesmos termos.
+%\licenca{ccbync}
+
+% CC BY NC SA: Esta licença permite que outros remixem, adaptem e criem a partir deste trabalho para fins não comerciais, desde que atribuam ao autor o devido crédito e que licenciem as novas criações sob termos idênticos.
+%\licenca{ccbyncsa}
+
+% CC BY NC ND: Esta licença só permite que outros façam download do trabalho e o compartilhe desde que atribuam crédito ao autor, mas sem que possam alterá-los de nenhuma forma ou utilizá-los para fins comerciais. Essa é a mais restritiva.
+%\licenca{ccbyncnd}
+
+% Deixar sem licença - isso é aplicado apenas aos trabalhos que não são obrigados a ter licença. Na duvida verifique isso com o seu orientador e professor responsável pelo TCC. Para deixar o texto sem licença deixe o comando licença em brando ou deixe comentado.
+\licenca{}
+% by DACOM/UTFPR-CM
+

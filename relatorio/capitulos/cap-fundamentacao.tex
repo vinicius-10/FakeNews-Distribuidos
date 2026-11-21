@@ -1,0 +1,31 @@
+%%%% CAPÍTULO 2 - FUNDAMENTAÇÃO TEÓRICA
+
+\chapter{Fundamentação teórica}\label{cap:fundamentacao}
+
+Este capítulo apresenta os conceitos que fundamentam o modelo simulado e as técnicas de paralelização utilizadas.
+
+\section{Autômatos celulares}
+
+Um \ac{AC} é um sistema discreto composto por uma grade de células, cada uma com um estado finito, que evolui em passos de tempo discretos segundo uma regra local aplicada simultaneamente a todas as células~\cite{Wolfram1983}. Na vizinhança de Moore, o próximo estado de uma célula depende dela própria e das oito células ao seu redor.
+
+\todo{Explicar atualização síncrona (double buffering) e condições de contorno.}
+
+\section{Modelos de propagação de rumores e de limiar}
+
+\todo{Modelo de Daley--Kendall (ignorante/espalhador/abafador)~\cite{DaleyKendall1964}; modelos de limiar de comportamento coletivo~\cite{Granovetter1978}; relação com os estados do trabalho.}
+
+\section{Computação paralela e distribuída}
+
+\todo{Decomposição de domínio; memória compartilhada vs. troca de mensagens; \ac{GIL} do Python; células fantasmas (\textit{halo}); barreiras~\cite{Pacheco2011,Tanenbaum2017}.}
+
+\section{Métricas de desempenho}
+
+O \textit{speedup} $S_p$ e a eficiência $E_p$ com $p$ unidades de processamento são definidos por
+
+\begin{equation}
+    S_p = \frac{T_1}{T_p}, \qquad E_p = \frac{S_p}{p},
+\end{equation}
+
+\noindent em que $T_1$ é o tempo da versão sequencial e $T_p$ o tempo com $p$ \textit{threads} ou processos~\cite{Pacheco2011}.
+
+\todo{Lei de Amdahl~\cite{Amdahl1967} e lei de Gustafson~\cite{Gustafson1988}.}

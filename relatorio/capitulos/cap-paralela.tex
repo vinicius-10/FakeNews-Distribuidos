@@ -1,0 +1,19 @@
+%%%% CAPÍTULO 4 - VERSÃO PARALELA
+
+\chapter{Versão paralela}\label{cap:paralela}
+
+\section{Estratégia de paralelização}
+
+\todo{Linguagem e mecanismo escolhidos (\textit{threads} em Java ou \texttt{multiprocessing} em Python) e justificativa (GIL).}
+
+\section{Divisão da matriz}
+
+\todo{Decomposição por blocos de linhas; figura mostrando a divisão entre \textit{threads}; tratamento de divisão não exata.}
+
+\section{Sincronização e consistência entre gerações}
+
+\todo{Leitura da geração $t$ compartilhada (somente leitura), escrita exclusiva de cada \textit{thread} nas suas linhas da geração $t+1$; barreira ao fim de cada geração; redução da contagem de estados; por que não há condição de corrida.}
+
+\section{Verificação de correção}
+
+\todo{Comparação célula a célula com a versão sequencial.}

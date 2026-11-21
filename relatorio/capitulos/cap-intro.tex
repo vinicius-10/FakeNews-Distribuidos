@@ -1,0 +1,33 @@
+%%%% CAPÍTULO 1 - INTRODUÇÃO
+%% Problema, motivação, objetivos e organização do relatório.
+
+\chapter{Introdução}\label{cap:introducao}
+
+A disseminação de notícias falsas (\textit{fake news}) em redes sociais é um fenômeno de difusão de informação estudado por diferentes áreas, da sociologia à física estatística~\cite{Vosoughi2018}. Modelos computacionais permitem simular essa propagação em grandes populações, mas o custo de simular milhões de indivíduos ao longo de muitas gerações torna necessário o uso de computação paralela e distribuída.
+
+Este trabalho parte de uma simulação sequencial, escrita em Python e fornecida na disciplina, em que a população é representada por uma matriz bidimensional e cada indivíduo assume um de três estados (ignorante, espalhador ou inativo), com propagação local pela vizinhança de Moore. O objetivo é transformar essa aplicação em versões paralela e distribuída, preservando o comportamento lógico da versão original, e avaliar o desempenho obtido.
+
+\todo{Completar a motivação com 1--2 parágrafos e referências.}
+
+\section{Objetivos}
+
+\subsection{Objetivo geral}
+
+Desenvolver e avaliar versões paralela e distribuída de uma simulação de propagação de \textit{fake news} baseada em autômato celular, comparando-as com a versão sequencial em termos de \textit{speedup}, eficiência e limitações.
+
+\subsection{Objetivos específicos}
+
+\begin{itemize}
+    \item Compreender e documentar o modelo computacional da versão sequencial;
+    \item Implementar uma versão paralela com divisão explícita da matriz entre \textit{threads}/processos, sem condições de corrida;
+    \item Implementar uma versão distribuída com \textit{sockets}, com sincronização das fronteiras da matriz entre processos;
+    \item Verificar que as três versões produzem resultados idênticos para os mesmos parâmetros;
+    \item Propor e avaliar melhorias no modelo e na implementação;
+    \item Medir e analisar desempenho variando tamanho da matriz, gerações, percentual inicial de espalhadores, número de \textit{threads} e de processos/\textit{hosts}.
+\end{itemize}
+
+\section{Organização do relatório}
+
+%% NBR 14724:2024: o trabalho se divide em seções (NBR 6024), não em "capítulos".
+%% Por isso usar "Seção~\ref{...}" em vez de \autoref (que imprime "Capítulo").
+A Seção~\ref{cap:fundamentacao} apresenta a fundamentação teórica. A Seção~\ref{cap:sequencial} descreve o modelo e a versão sequencial. As seções~\ref{cap:paralela} e~\ref{cap:distribuida} apresentam as versões paralela e distribuída. A Seção~\ref{cap:melhorias} descreve as melhorias implementadas, a Seção~\ref{cap:experimentos} apresenta os experimentos e resultados, e a Seção~\ref{cap:conclusoes} traz as conclusões.
