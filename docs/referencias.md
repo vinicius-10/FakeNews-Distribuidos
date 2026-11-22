@@ -331,6 +331,10 @@ Fontes retiradas por não terem texto aberto: [ver o fim do arquivo](#-retiradas
   relatório técnico LBNL-47929, maio 2001
 - **Texto completo:** [OSTI (PDF)](https://www.osti.gov/servlets/purl/783770) ·
   [registro no OSTI](https://www.osti.gov/biblio/783770) (repositório do Departamento de Energia dos EUA)
+- **Versão dos anais (SC '01):** DOI [10.1145/582034.582084](https://doi.org/10.1145/582034.582084) ·
+  [IEEE Xplore 1592831](https://ieeexplore.ieee.org/document/1592831) (pago; abre com o acesso da
+  UTFPR, conferido em 22/11/2026). BibTeX dessa versão em
+  [busca-artigos.md](busca-artigos.md#-bibtex-dos-artigos-do-ieee-xplore) (chave `DingHe2001`).
 - **ABNT:** DING, C. H. Q.; HE, Y. *A ghost cell expansion method for reducing communications in
   solving PDE problems*. Berkeley: Lawrence Berkeley National Laboratory, 2001. (Relatório
   LBNL-47929). Disponível em: https://www.osti.gov/biblio/783770. Acesso em: 22 nov. 2026.
@@ -341,8 +345,11 @@ Fontes retiradas por não terem texto aberto: [ver o fim do arquivo](#-retiradas
   um pouco mais de memória e de cálculo. Combinado com a eliminação das comunicações diagonais, o
   método acelera a comunicação em até 170%, com medições no Cray T3E e no IBM SP.
 - **No trabalho:** **melhoria candidata** de redução de comunicação: *halo* de *k* linhas trocado a
-  cada *k* gerações.
-- **Lido:** resumo do registro OSTI e da cópia no eScholarship (via busca).
+  cada *k* gerações. Cuidado ao citar o ganho: os 170% são **do tempo de comunicação**; o próprio
+  artigo observa que, quando a comunicação é uma parte pequena do total, o tempo total quase não
+  cai.
+- **Lido:** resumo do registro OSTI e da cópia no eScholarship (via busca); resumo e conclusões da
+  versão dos anais no IEEE Xplore.
 
 ### 14. Bourached (2017) — *Blocking versus non-blocking halo exchange*
 
@@ -400,7 +407,10 @@ Fontes retiradas por não terem texto aberto: [ver o fim do arquivo](#-retiradas
 - **Texto completo:** [PDF](https://www3.cs.stonybrook.edu/~rezaul/Spring-2019/CSE613/reading/Amdahl-1967.pdf)
   (cópia pública numa página de disciplina da Stony Brook University; o registro na ACM não aparece
   como aberto). A lei também está explicada na seção 2.2.3 de Eijkhout, Chow e van de Geijn
-  (entrada 11), de licença aberta
+  (entrada 11), de licença aberta. Há também uma **reimpressão** no *IEEE Solid-State Circuits
+  Society Newsletter*, v. 12, n. 3, p. 19–20, 2007 (DOI
+  [10.1109/N-SSC.2007.4785615](https://doi.org/10.1109/N-SSC.2007.4785615); pago, o PDF abre com o
+  acesso da UTFPR no IEEE Xplore, conferido em 22/11/2026)
 - **DOI:** [10.1145/1465482.1465560](https://doi.org/10.1145/1465482.1465560)
 - **ABNT:** AMDAHL, G. M. Validity of the single processor approach to achieving large scale
   computing capabilities. *In*: AFIPS SPRING JOINT COMPUTER CONFERENCE, 1967, Atlantic City.
