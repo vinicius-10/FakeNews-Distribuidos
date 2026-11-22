@@ -171,9 +171,9 @@ DOI 10.1145/582034.582084, que faltava no `referencias.md`), e **Amdahl (1967)**
 do *IEEE Solid-State Circuits Society Newsletter* de 2007 ([IEEE Xplore 4785615](https://ieeexplore.ieee.org/document/4785615),
 só PDF).
 
-> **Atenção ao critério do grupo:** o `referencias.md` passou a aceitar **só fontes de acesso
-> aberto** (commit `4f26dd7`). B2, B12, B17, B20 e B21 **não** têm cópia aberta: só entram no
-> relatório se o grupo aceitar fontes lidas pelo acesso da UTFPR. B15 já tem cópia aberta.
+> **Critério de acesso (decidido em 22/11/2026):** valem as fontes que o grupo consegue abrir,
+> inclusive só pelo acesso da UTFPR. B2, B12, B17, B20 e B21 não têm cópia aberta, mas abrem por
+> esse acesso e podem ser citados.
 
 ### Só pelo Portal CAPES (falta conferir com o login CAFe)
 
