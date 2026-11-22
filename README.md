@@ -130,7 +130,7 @@ O uso de ferramentas de IA generativa como apoio é registrado no apêndice do r
 
 [![GitHub](https://img.shields.io/badge/GitHub-arthur--hj-181717?logo=github&logoColor=white)](https://github.com/arthur-hj)
 
-**João Alberto Benassi Torezan**
+**João Alberto Benaci Torezan**
 
 [![GitHub](https://img.shields.io/badge/GitHub-k7vinilstorage-181717?logo=github&logoColor=white)](https://github.com/k7vinilstorage)
 
