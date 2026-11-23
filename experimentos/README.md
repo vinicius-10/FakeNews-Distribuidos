@@ -62,7 +62,19 @@ python -m experimentos.perfis
 
 # efeito das melhorias do MODELO (resistência individual e bots), não do desempenho
 python -m experimentos.modelo
+
+# custo da versão sequencial do professor (análise de custo do relatório):
+# perfil por etapa (deepcopy x varredura x contar_estados), limiar x percentual
+# e memória da grade; --rapido só confere se roda (grava numa pasta temporária)
+python -m experimentos.custo_sequencial --cpu "nome do processador"
 ```
+
+O perfil do `custo_sequencial` mede o `deepcopy` **à parte**, numa cópia da
+mesma grade, porque ele acontece dentro de `proxima_geracao` e o arquivo do
+professor não é alterado; o tempo da varredura sai por diferença (estimativa). A
+tabela limiar × percentual usa a sequencial refatorada, que dá as mesmas grades
+(testado), e não depende da máquina. A máquina do perfil vai em
+`custo_ambiente.csv`, separada do `ambiente.csv` das outras baterias.
 
 As baterias são divididas porque o código do professor é muito mais lento que as
 versões refatoradas: medir tudo de uma vez levaria dezenas de minutos sem
@@ -202,6 +214,11 @@ experimentos/resultados/
 ├── perfis.csv / perfis.md     # cálculo x comunicação x espera e desbalanceamento
 ├── modelo_geracoes.csv        # melhorias do modelo: contagem por geração e cenário
 ├── modelo_resumo.csv / modelo.md  # pico, alcance e duração de cada cenário
+├── custo_perfil.csv           # professor: tempo de cada etapa, por geração
+├── custo_limiar.csv           # gerações até parar e alcance por limiar × % inicial
+├── custo_memoria.csv          # bytes por célula: lista de listas × vetor de bytes
+├── custo_ambiente.csv         # máquina em que o perfil de custo foi medido
+├── custo_sequencial.md        # tabelas do custo sequencial para o relatório
 └── graficos/
     ├── speedup.png            # speedup × trabalhadores, um painel por tamanho
     ├── eficiencia.png         # eficiência × trabalhadores

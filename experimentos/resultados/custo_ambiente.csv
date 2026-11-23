@@ -1,0 +1,9 @@
+item,valor
+processador,13th Gen Intel(R) Core(TM) i7-13650HX
+nucleos_fisicos,14
+nucleos_logicos,20
+memoria_gb,23.6
+sistema,Windows 11 (10.0.26300)
+python,3.12.10
+implementacao,CPython
+ambiente,"notebook na tomada, demais programas fechados; execução serial (um único processo)"
