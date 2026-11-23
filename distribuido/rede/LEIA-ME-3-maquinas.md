@@ -4,6 +4,11 @@ Guia para rodar a simulação distribuída com o **PC como coordenador** e **um 
 worker** de cada lado, na mesma rede local. Tudo aqui foi verificado nesta máquina em
 23/nov/2026 (Py 3.11.7 e 3.12.10).
 
+Os scripts desta pasta (`.ps1` no Windows, `.sh` no Linux) são **auxiliares opcionais** para preparar
+as máquinas (*firewall*, pacote, testes de rede) e disparar o teste por SSH. A simulação em si roda
+igual nos dois sistemas com `python -m distribuido.coordenador` e `python -m distribuido.worker`;
+os comandos estão em "Modo manual (quatro terminais)".
+
 ## Topologia
 
 ```
@@ -89,7 +94,8 @@ sudo ufw allow from 192.168.0.0/24 to any app "Python3" 2>/dev/null || \
 
 ### Linux
 
-O script `preparar-no-linux.sh` faz tudo (clona, testa, verifica conectividade):
+O script `preparar-no-linux.sh` faz tudo (clona a branch `main`, testa, verifica conectividade).
+Para testar outra branch, acrescente `--ramo <branch>`:
 
 ```bash
 ./preparar-no-linux.sh --coordenador 192.168.0.4 --porta 5000

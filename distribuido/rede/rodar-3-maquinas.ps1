@@ -1,7 +1,7 @@
 ﻿<#
 .SYNOPSIS
-    Executa a versão distribuída em 3 máquinas: o coordenador aqui e um worker
-    em cada TV box, via SSH.
+    Executa a versão distribuída em 3 máquinas: o coordenador e um worker aqui e
+    um worker em cada notebook, via SSH.
 
 .DESCRIPTION
     A cadeia de halos exige uma ORDEM de conexão: o rank (e portanto a faixa de
@@ -15,10 +15,11 @@
       - o projeto existe nos nós (rode preparar-no-linux.sh primeiro).
 
 .PARAMETER No1
-    Usuário@host do primeiro worker (rank 0). Ex.: btv9@192.168.0.8
+    Usuário@host do primeiro notebook (worker rank 1; o rank 0 é o worker local).
+    Ex.: aluno@192.168.0.8
 
 .PARAMETER No2
-    Usuário@host do segundo worker (rank 1). Ex.: btvx@192.168.0.9
+    Usuário@host do segundo notebook (worker rank 2). Ex.: aluno@192.168.0.9
 
 .PARAMETER Porta
     Porta do coordenador. Padrão 5000.
@@ -29,7 +30,7 @@
 
 .EXAMPLE
     pwsh -File distribuido\rede\rodar-3-maquinas.ps1 `
-        -No1 btv9@192.168.0.8 -No2 btvx@192.168.0.9
+        -No1 aluno@192.168.0.8 -No2 aluno@192.168.0.9
 #>
 [CmdletBinding()]
 param(
@@ -77,7 +78,7 @@ if (-not $meuIp) {
 Ok "coordenador vai escutar como $meuIp`:$Porta"
 
 # Firewall: python.exe precisa de regra de ENTRADA no perfil da rede atual,
-# senão o box conecta e o handshake do halo morre em silêncio.
+# senão o notebook conecta e o handshake do halo morre em silêncio.
 $perfilAtual = (Get-NetConnectionProfile |
     Where-Object { $_.InterfaceAlias -eq 'Ethernet' } |
     Select-Object -First 1).NetworkCategory
@@ -103,7 +104,7 @@ foreach ($no in @($No1, $No2)) {
     if ($teste.TcpTestSucceeded) {
         Ok "$hostAlvo:22 alcançável"
     } else {
-        Falha "$hostAlvo:22 inalcançável — o box está ligado? o SSH está ativo? o IP está certo?"
+        Falha "$hostAlvo:22 inalcançável — o notebook está ligado? o SSH está ativo? o IP está certo?"
         exit 1
     }
 }

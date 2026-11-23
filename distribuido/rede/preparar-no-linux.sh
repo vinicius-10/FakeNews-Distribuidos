@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Prepara um nó Linux (TV box Armbian) para participar do teste distribuído.
+# Prepara um notebook com Linux para participar do teste distribuído.
 #
 # O que faz:
 #   1. confere o Python 3 (mínimo 3.8, o projeto usa dataclasses);
-#   2. obtém o código do projeto (git clone ou git pull);
+#   2. obtém o código do projeto (git clone ou git pull), por padrão da branch main;
 #   3. roda a suíte de testes local (prova que o nó está saudável ANTES de entrar
 #      na rede — um nó quebrado no meio do teste é muito mais caro de diagnosticar);
 #   4. testa se este nó alcança o coordenador e se o próprio nó aceita conexão de
@@ -12,9 +12,10 @@
 # Uso:
 #   ./preparar-no-linux.sh --coordenador 192.168.0.4 --porta 5000
 #   ./preparar-no-linux.sh --coordenador 192.168.0.4 --porta 5000 --pular-testes
+#   ./preparar-no-linux.sh --coordenador 192.168.0.4 --ramo outra-branch   # testar outra branch
 #
 # Requer: python3, git, curl ou nc (para o teste de porta). Instala com apt se
-# estiver em Debian/Ubuntu/Armbian e tiver sudo sem senha ou pedir a senha.
+# estiver em Debian/Ubuntu e tiver sudo sem senha ou pedir a senha.
 set -euo pipefail
 
 COORDENADOR=""
@@ -22,7 +23,8 @@ PORTA=5000
 PULAR_TESTES=0
 DIRETORIO="$HOME/FakeNews-Distribuidos"
 REPO="${REPO:-https://github.com/vinicius-10/FakeNews-Distribuidos.git}"
-RAMO="${RAMO:-feat/experimentos-e-robustez}"
+# Branch padrão: main (a versão integrada e revisada). Troque com --ramo ou RAMO=...
+RAMO="${RAMO:-main}"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -90,7 +92,7 @@ if [[ "$PULAR_TESTES" -eq 1 ]]; then
     amarelo "pulada (--pular-testes)"
 else
     cd "$DIRETORIO"
-    # 27 testes; roda em ~5 s no PC e talvez 30-60 s no box.
+    # 27 testes; roda em ~5 s no PC e talvez 30-60 s num notebook mais fraco.
     if python3 -m unittest discover -s testes 2>&1 | tail -5; then
         verde "suíte passou neste nó"
     else

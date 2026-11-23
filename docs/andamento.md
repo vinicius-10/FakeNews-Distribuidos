@@ -192,8 +192,9 @@ onde cada um marca as suas tarefas.
       deu 100,9 s, o tempo de abrir os terminais) e precisa começar depois das conexões; uma
       conexão que não é *worker* (ex.: `Test-NetConnection` na porta 5000) derruba o
       coordenador com `ConnectionError` em vez de ser descartada;
-    - [ ] trocar os scripts `.ps1`/`.sh` de `distribuido/rede/` por Python ou deixar claro que
-      são opcionais (o CONTRIBUTING pede scripts de execução em Python, iguais nos dois sistemas).
+    - [x] scripts `.ps1`/`.sh` de `distribuido/rede/` mantidos como auxiliares do teste entre
+      máquinas (*firewall*, pacote, preparo dos notebooks); a simulação continua com `python -m`.
+      O `preparar-no-linux.sh` baixa a `main` por padrão.
 12. [ ] **Entrega**:
     - [ ] montar o **ZIP** com código, instruções, PDF dos slides e vídeo (ou link na nuvem
       acessível até o fim da avaliação);
@@ -221,3 +222,5 @@ onde cada um marca as suas tarefas.
   rodada entre 3 máquinas reais na rede local (teste de conexão em 200×200, mesmo resultado da
   sequencial). Falta medir em 2000×2000 e corrigir no coordenador o `tempo_total` e o descarte de
   conexões que não são *workers*.
+- **23 nov. 2026**: scripts de `distribuido/rede/` mantidos como auxiliares opcionais; agora
+  descrevem notebooks (não TV box) e o `preparar-no-linux.sh` baixa a `main` por padrão.
