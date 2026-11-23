@@ -1,0 +1,9 @@
+item,valor
+processador,12th Gen Intel(R) Core(TM) i5-1240P
+nucleos_fisicos,12
+nucleos_logicos,16
+memoria_gb,15.3
+sistema,Fedora Linux 44 (kernel 7.3.3-200.fc44.x86_64)
+python,3.12.16
+implementacao,CPython
+ambiente,"notebook na tomada, governador performance, Fedora Linux nativo; versão distribuída em localhost (sem rede física)"
