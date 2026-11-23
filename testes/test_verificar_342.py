@@ -88,14 +88,22 @@ class TestReferenciasPublicadas(unittest.TestCase):
 
 
 class TestAvisoDeVersao(unittest.TestCase):
-    """O padrão do projeto é Python 3.11; outra versão precisa avisar."""
+    """
+    O padrão do projeto é `verificar_342.VERSAO_PADRAO`; outra versão avisa.
+
+    Os testes derivam da constante em vez de fixar "3.11" ou "3.12", para que
+    trocar a versão de referência não quebre a suíte.
+    """
 
     def test_versao_padrao_nao_avisa(self):
-        self.assertIsNone(v.aviso_de_versao("3.11.7"))
-        self.assertIsNone(v.aviso_de_versao("3.11.0"))
+        self.assertIsNone(v.aviso_de_versao(v.VERSAO_PADRAO + ".0"))
+        self.assertIsNone(v.aviso_de_versao(v.VERSAO_PADRAO + ".99"))
 
     def test_versao_diferente_avisa(self):
-        for versao in ("3.12.10", "3.13.5", "3.10.13"):
+        outras = [versao for versao in ("3.10.13", "3.11.7", "3.12.10", "3.13.5")
+                  if not versao.startswith(v.VERSAO_PADRAO + ".")]
+        self.assertTrue(outras, "precisa haver ao menos uma versão fora do padrão")
+        for versao in outras:
             with self.subTest(versao=versao):
                 aviso = v.aviso_de_versao(versao)
                 self.assertIsNotNone(aviso)
@@ -106,10 +114,14 @@ class TestAvisoDeVersao(unittest.TestCase):
         """Chamada sem argumento (como o main faz) não pode explodir."""
         import platform
         aviso = v.aviso_de_versao()
-        if platform.python_version().startswith("3.11."):
+        if platform.python_version().startswith(v.VERSAO_PADRAO + "."):
             self.assertIsNone(aviso)
         else:
             self.assertIsNotNone(aviso)
+
+    def test_padrao_do_projeto_e_312(self):
+        """A versão de referência é a do ambiente do grupo."""
+        self.assertEqual(v.VERSAO_PADRAO, "3.12")
 
 
 if __name__ == "__main__":

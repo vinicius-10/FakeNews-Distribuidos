@@ -20,11 +20,21 @@ cópia é medida **à parte**, sobre a mesma grade, e o tempo da varredura sai p
 grade nova. Os totais são divididos pelo número de gerações para dar "por
 geração".
 
+Versão do interpretador (importa, e muito)
+------------------------------------------
+O padrão de execução é **Python 3.12**, e o script avisa quando roda em outra
+versão. A versão não é detalhe: em 3.12 o código do professor fica mais lento
+que em 3.11, e o efeito **cresce com o tamanho da grade** — o custo por célula
+vai de ~0,88 µs na grade de 500² a ~1,02 µs na de 2000² (+16%). Consequência:
+a Tabela 1, publicada em 3.11.7, **não se reproduz em 3.12** (chega a +24% em
+2000²), enquanto a Tabela 2, publicada em 3.12.10, reproduz dentro de 2%.
+Registre sempre a versão junto do número.
+
 Como usar
 ---------
-    python -m experimentos.verificar_342                # as duas tabelas
-    python -m experimentos.verificar_342 --tabela 1     # só a Tabela 1
-    python -m experimentos.verificar_342 --tabela 2     # só a Tabela 2
+    py -3.12 -m experimentos.verificar_342               # as duas tabelas
+    py -3.12 -m experimentos.verificar_342 --tabela 1    # só a Tabela 1
+    py -3.12 -m experimentos.verificar_342 --tabela 2    # só a Tabela 2
 
 O resultado sai em `experimentos/resultados/secao-3.4.2.md`, com a comparação
 lado a lado contra os valores publicados e o desvio percentual.
@@ -63,26 +73,26 @@ PERCENTUAL = 0.05
 LIMIAR = 2
 SEMENTE = 42
 
-# Versão de Python de referência deste projeto: a do artigo (Tabela 1) e a usada
-# na maioria dos testes. Outra versão move o custo entre as etapas — em 3.12 a
-# varredura fica relativamente mais cara e a cópia mais barata —, o que afasta a
-# divisão da Tabela 2 do que o texto publicado descreve.
-VERSAO_PADRAO = "3.11"
+# Versão de Python de referência para as medições deste projeto: **3.12**.
+# É a versão do ambiente do grupo e a que o artigo usou na Tabela 2. A Tabela 1
+# do artigo foi medida em 3.11.7, então o desvio dela aqui inclui o efeito da
+# troca de interpretador — não é só ruído de máquina.
+VERSAO_PADRAO = "3.12"
 
 
 def aviso_de_versao(versao=None):
     """
     Aviso a imprimir quando a medição não roda na versão de referência.
 
-    Devolve None quando a versão é a padrão (3.11.x).
+    Devolve None quando a versão é a padrão (3.12.x).
     """
     atual = versao or platform.python_version()
     if atual.split(".")[:2] == VERSAO_PADRAO.split("."):
         return None
     return (f"⚠️  Python {atual} — o padrão do projeto é {VERSAO_PADRAO}. "
-            "A Tabela 1 do trabalho foi medida em 3.11.7 e a Tabela 2 em 3.12.10; "
-            "a divisão entre varredura e cópia muda com a versão, então compare "
-            "sabendo qual interpretador foi usado.")
+            "O custo das etapas muda com o interpretador: em 3.12 a varredura "
+            "pesa mais e a cópia menos do que em 3.11. Rode com 3.12 para "
+            "comparar com a Tabela 2 do artigo.")
 
 
 
@@ -315,8 +325,13 @@ def main(argv=None):
                    for t in tabela1 if t in PUBLICADO_TABELA1]
         maior_desvio = max(abs(d) for d in desvios) if desvios else None
         por_celula = [tabela1[t]["por_celula_us"] for t in sorted(tabela1)]
-        espalhamento = max(por_celula) - min(por_celula)
-        estavel = espalhamento < 0.15
+        # Critério RELATIVO. A amplitude absoluta engana: 0,14 µs parece pouco,
+        # mas sobre 0,88 µs é 16% de variação — e é justamente o que aparece em
+        # Python 3.12 na grade maior, onde a localidade de cache piora.
+        menor_celula, maior_celula = min(por_celula), max(por_celula)
+        variacao_relativa = ((maior_celula - menor_celula) / menor_celula * 100
+                             if menor_celula else 0.0)
+        estavel = variacao_relativa <= 10.0
         lista_celula = ", ".join(f"{tamanho}={valor:.2f}"
                                  for tamanho, valor in zip(sorted(tabela1), por_celula))
         if maior_desvio is not None:
@@ -330,8 +345,8 @@ def main(argv=None):
         relatorio.append(
             f"  Custo por célula e geração: {lista_celula} µs — "
             f"{'permanece estável' if estavel else 'variou'} "
-            f"(amplitude {espalhamento:.2f} µs). "
-            f"{'Confirma a linearidade em L·C que o texto afirma.' if estavel else 'Não confirmou a linearidade esperada.'}")
+            f"({variacao_relativa:.0f}% entre o menor e o maior tamanho). "
+            f"{'Confirma a linearidade em L·C que o texto afirma.' if estavel else 'A linearidade em L·C NÃO se confirmou neste ambiente: a grade maior ficou proporcionalmente mais cara (efeito de cache).'}")
     if tabela2:
         desvio_total = _desvio(tabela2["total"], PUBLICADO_TABELA2["total"])
         total = tabela2["total"] or 1
