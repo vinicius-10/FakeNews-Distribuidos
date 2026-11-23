@@ -67,6 +67,8 @@ A grade inicial é sorteada com semente fixa e as regras são determinísticas, 
 | Experimentos de desempenho | ⏳ Planejado |
 | Relatório e apresentação | 🔄 Em escrita |
 
+Detalhes do que já foi feito e checklist do que falta: [docs/andamento.md](docs/andamento.md).
+
 ## 📚 Conceitos Aplicados
 | Conceito | Onde aparece |
 |---|---|
