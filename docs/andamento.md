@@ -12,10 +12,10 @@ arquivo** (tabela, checklist e histórico) no mesmo PR.
 | Sequencial original (professor) | ✅ referência, não alterar | [`sequencial/fakenews_sequencial_original.py`](../sequencial/fakenews_sequencial_original.py) |
 | Sequencial refatorada | ✅ feita e testada | [`sequencial/fakenews_sequencial.py`](../sequencial/fakenews_sequencial.py) + [`comum/`](../comum/) |
 | Paralela (processos e threads) | ✅ feita e testada | [`paralelo/fakenews_paralelo.py`](../paralelo/fakenews_paralelo.py) |
-| Distribuída (sockets TCP) | ✅ feita e testada | [`distribuido/`](../distribuido/) |
+| Distribuída (sockets TCP) | ✅ feita e testada (localhost e interface de rede real de 1 PC) | [`distribuido/`](../distribuido/) |
 | Testes de equivalência | ✅ 27 testes passando (Windows e Linux) | [`testes/`](../testes/) |
-| 6 melhorias | ✅ implementadas · ❌ não medidas · ❌ não escritas no relatório | [seção 5](#5-melhorias-escolhidas) |
-| Experimentos de desempenho | 🔄 em andamento (outro integrante) | — |
+| 6 melhorias | ✅ implementadas · ✅ medidas · ❌ não escritas no relatório | [seção 5](#5-melhorias-escolhidas) |
+| Experimentos de desempenho | ✅ medidos numa máquina (localhost) · 🔄 teste entre 3 máquinas | [`experimentos/`](../experimentos/) |
 | Relatório (Overleaf) | 🔄 fundamentação avançou; o resto tem `\todo` | [`relatorio/`](../relatorio/) (cópia) |
 | Slides (PDF) | ❌ não começados | — |
 | Vídeo 10–15 min | ❌ não gravado | — |
@@ -109,40 +109,46 @@ Esta lista acompanha o [roadmap do grupo](https://claude.ai/artifact/X6U3gNTZ2Fd
 onde cada um marca as suas tarefas.
 
 0. [ ] **Confirmar o prazo de entrega e o número do grupo** (o número vai no nome do vídeo).
-1. [ ] **PR [#3](https://github.com/vinicius-10/FakeNews-Distribuidos/pull/3)** de
-   `feat/implementacoes-codigo` para a `main`: aberto, falta 1 aprovação e o merge.
-   - [x] revisar se todo o código está comentado em português;
-   - [x] conferir se o README tem as instruções de execução das três versões (Windows e Linux).
-2. [ ] **Script de experimentos** em Python (`experimentos/`). Hoje o código já mede o tempo do
-   laço (`tempo_laco`) e o tempo total com criação de processos/conexões (`tempo_total`), e já
-   aceita os parâmetros de cada cenário; falta o script que roda tudo e calcula as métricas:
-   - [ ] variar tamanho da grade, gerações, % de espalhadores, nº de *threads*/processos e nº de
-     *workers*/hosts, com limiar 2;
-   - [ ] rodar **os mesmos cenários nas três versões** (sequencial, paralela e distribuída);
-   - [ ] 1 execução de aquecimento descartada + pelo menos 5 repetições, reportando a mediana;
-   - [ ] gravar no CSV a **configuração da máquina**: processador, núcleos físicos e lógicos, RAM,
-     sistema operacional, versão do Python e ambiente (notebook na tomada, local ou rede);
-   - [ ] calcular **speedup** (S = T_seq / T_p) e **eficiência** (E = S / p) contra a sequencial,
-     usando `tempo_laco` e também `tempo_total` (mostra o custo de subir processos/conexões);
-   - [ ] (opcional) fração serial de **Karp–Flatt**, para diagnosticar sobrecarga e
-     desbalanceamento.
-3. [ ] **Medir as melhorias de desempenho**: grade compacta × original (`deepcopy`) e `--bits` ×
-   1 byte por célula (tempo de comunicação pelo perfil por *worker*).
-4. [ ] **Medir o efeito das melhorias do modelo**: espalhadores por geração com e sem resistência e
-   *bots* (`--estatisticas`).
-5. [ ] **Tabelas e gráficos** gerados por script, nunca editados à mão: tabela comparativa de
-   tempos das três versões, gráfico de tempo, de *speedup* e de eficiência (paralela e
-   distribuída), e cálculo × comunicação × espera por *worker*.
-6. [ ] **Análises pedidas no enunciado** (subseções de "Análise" no capítulo de experimentos). Os
-   dados já são coletados com `--estatisticas`; falta rodar e interpretar:
-   - [ ] **gargalos**: tempo de cálculo por *worker* e índice de desbalanceamento (mais lento /
-     média);
-   - [ ] **sincronização**: `espera_s` (tempo nas barreiras da paralela e esperando a decisão do
-     coordenador na distribuída);
-   - [ ] **custo de comunicação**: `comunicacao_s` e `bytes_enviados` (só na distribuída; a
-     paralela usa memória compartilhada), com e sem `--bits`;
-   - [ ] **limitações observadas** (GIL no modo *threads*, núcleos P e E do processador, grade
-     pequena demais para compensar a comunicação etc.).
+1. [ ] **Código na `main`**:
+   - [x] PR [#3](https://github.com/vinicius-10/FakeNews-Distribuidos/pull/3) (três versões, 6
+     melhorias e testes): aprovado e integrado em 23 nov.;
+   - [x] PR [#4](https://github.com/vinicius-10/FakeNews-Distribuidos/pull/4) (experimentos e
+     robustez): integrado na `feat/implementacoes-codigo` em 23 nov.;
+   - [ ] PR [#5](https://github.com/vinicius-10/FakeNews-Distribuidos/pull/5) de
+     `feat/implementacoes-codigo` para a `main` (leva o PR #4): falta 1 aprovação e o merge.
+2. [x] **Script de experimentos** em Python ([`experimentos/`](../experimentos/README.md)):
+   `medir.py` (baterias), `analisar.py` (métricas, tabelas e gráficos), `perfis.py` (tempo por
+   *worker*) e `modelo.py` (melhorias do modelo).
+   - [x] variar tamanho da grade (500², 1000², 2000²) e nº de processos/*threads*/*workers*
+     (1 a 24), com limiar 2;
+   - [ ] variar **gerações** e **% de espalhadores** (o `medir.py` já aceita `--geracoes` e
+     `--percentual`; as baterias usaram só 20 gerações e 5%);
+   - [x] rodar **os mesmos cenários nas três versões**; o SHA-256 da grade final confirma que
+     todas deram o mesmo resultado em todas as execuções;
+   - [x] 1 execução de aquecimento descartada + repetições, reportando a mediana (5 ou mais na
+     paralela e na distribuída; 3 na do professor, que é a mais lenta);
+   - [x] gravar a **configuração da máquina** em `resultados/ambiente.csv` (i9-12900F, 16 núcleos
+     físicos / 24 lógicos, 31,8 GB, Windows, Python 3.11.7, desktop na tomada);
+   - [x] calcular **speedup** e **eficiência** sobre `tempo_laco` e `tempo_total`;
+   - [x] fração serial de **Karp–Flatt**, limite de Amdahl e Gustafson.
+3. [x] **Medir as melhorias de desempenho** (`resultados/tabelas.md`, `perfis.md`):
+   - grade compacta × original (`deepcopy`): **3,3× a 3,5×** mais rápida com 1 trabalhador;
+   - `--bits`: *halo* de ~1.921 para ~281 bytes por *worker* por geração (16 *workers*, 1000²),
+     sem ganho de tempo em `localhost` (o ganho só aparece numa rede real).
+4. [x] **Medir o efeito das melhorias do modelo** (`resultados/modelo.md`): resistência 1–3
+   aumenta o alcance em +17 p.p.; resistência 3–5 derruba para 5%; *bots* 2% levam a 93%.
+5. [x] **Tabelas e gráficos** gerados por script (`resultados/tabelas.md` e
+   `resultados/graficos/`: *speedup*, eficiência, GIL, melhorias e modelo).
+6. [ ] **Análises pedidas no enunciado**: os dados estão medidos; falta escrever a interpretação
+   no capítulo de experimentos:
+   - [x] **gargalos**: desbalanceamento de 1,00 a 1,10 (mais lento / média);
+   - [x] **sincronização**: a espera nas barreiras sobe de 0,05% (1 *worker*) para ~19%
+     (16 *workers*) do laço;
+   - [x] **custo de comunicação**: abaixo de 2,5% do laço em `localhost`, com e sem `--bits`;
+   - [x] **limitações**: GIL (modo *threads* sem ganho: speedup de 0,87 a 0,97 com 1 a 24 *threads*),
+     eficiência caindo acima de 8 *workers* (núcleos P/E) e speedup superlinear com 2 *workers*
+     (cache);
+   - [ ] texto das análises no relatório (item 7).
 7. [ ] **Relatório no Overleaf**. `\todo` pendentes (cópia de 23 nov.): introdução 1 · fundamentação 3
    · sequencial 2 · paralela 4 · distribuída 5 · melhorias 5 (faltam as 6 subseções) ·
    experimentos 13 · conclusão 6 · apêndice de execução 2. No capítulo de experimentos: preencher
@@ -170,7 +176,14 @@ onde cada um marca as suas tarefas.
 11. [ ] Rodar em outros ambientes:
     - [x] **Linux**: testes e as três versões rodados no Ubuntu (WSL, Python 3.12.3), com o mesmo
       resultado do Windows;
-    - [ ] (se possível) a distribuída entre 2 ou mais máquinas reais.
+    - [x] **interface de rede real**: distribuída com `--host 0.0.0.0` e *workers* conectando
+      pelo IP da máquina (2 e 3 *workers*), mesmo resultado da sequencial
+      ([`validacao.md`](../experimentos/resultados/rede/validacao.md));
+    - [ ] a distribuída **entre 3 máquinas reais** (roteiro em
+      [`distribuido/rede/LEIA-ME-3-maquinas.md`](../distribuido/rede/LEIA-ME-3-maquinas.md)):
+      falta liberar o *firewall*, preparar os notebooks, rodar e medir;
+    - [ ] trocar os scripts `.ps1`/`.sh` de `distribuido/rede/` por Python ou deixar claro que
+      são opcionais (o CONTRIBUTING pede scripts de execução em Python, iguais nos dois sistemas).
 12. [ ] **Entrega**:
     - [ ] montar o **ZIP** com código, instruções, PDF dos slides e vídeo (ou link na nuvem
       acessível até o fim da avaliação);
@@ -189,3 +202,8 @@ onde cada um marca as suas tarefas.
   Testes e as três versões rodados no Linux (Ubuntu no WSL), iguais ao Windows: 27 testes passando
   e, em 400×400 com limiar 2, a mesma contagem final em todas as versões. Experimentos passaram
   para outro integrante.
+- **23 nov. 2026**: PR #3 integrado na `main`. PR #4 (experimentos e correções de robustez)
+  integrado na `feat/implementacoes-codigo`: baterias em 500², 1000² e 2000² com 1 a 24
+  *workers*, perfil por *worker*, efeito das melhorias e validação da distribuída pela interface
+  de rede. Speedup do laço em 2000² com 24 *workers*: 10,9 (paralela) e 12,2 (distribuída em
+  `localhost`). PR #5 aberto para levar tudo à `main`.
