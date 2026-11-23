@@ -13,7 +13,7 @@ arquivo** (tabela, checklist e histórico) no mesmo PR.
 | Sequencial refatorada | ✅ feita e testada | [`sequencial/fakenews_sequencial.py`](../sequencial/fakenews_sequencial.py) + [`comum/`](../comum/) |
 | Paralela (processos e threads) | ✅ feita e testada | [`paralelo/fakenews_paralelo.py`](../paralelo/fakenews_paralelo.py) |
 | Distribuída (sockets TCP) | ✅ feita e testada (localhost, interface de rede real e 3 máquinas) | [`distribuido/`](../distribuido/) |
-| Testes de equivalência | ✅ 27 testes passando (Windows e Linux) | [`testes/`](../testes/) |
+| Testes | ✅ 56 testes passando (Windows e Linux): equivalência, protocolo, robustez, melhorias 2 e 3, saída, métricas | [`testes/`](../testes/) |
 | 6 melhorias | ✅ implementadas · ✅ medidas · ❌ não escritas no relatório | [seção 5](#5-melhorias-escolhidas) |
 | Experimentos de desempenho | ✅ medidos numa máquina (localhost) · 🔄 3 máquinas: conexão ok, falta medir | [`experimentos/`](../experimentos/) |
 | Relatório (Overleaf) | 🔄 fundamentação avançou; o resto tem `\todo` | [`relatorio/`](../relatorio/) (cópia) |
@@ -79,6 +79,19 @@ Decisões principais:
 - `test_equivalencia.py`: refatorada, paralela (processos e threads) e distribuída **iguais ao
   professor geração a geração**; com as melhorias ligadas, iguais à sequencial refatorada.
 - `test_protocolo.py`: mensagens grandes e vazias, JSON, conexão fechada no meio, tipo errado.
+- `test_robustez.py`: na distribuída, conexões que não são *workers* (fecha logo, HTTP, tipo
+  errado, JSON/UTF-8 inválido, sem `porta_halo`, silenciosa) são descartadas e o resultado continua
+  igual ao do professor; `tempo_total` sem a espera pelos *workers*; *worker* que cai ou trava vira
+  `ErroProtocolo` citando a geração, sem travar.
+- `test_melhorias_saida.py`: estatísticas e animação ligadas não mudam a grade em nenhuma versão;
+  contagens por geração iguais às do professor; perfil por *worker*; CSVs e HTML gravados certos;
+  `resumo()` e amostragem da animação com números feitos à mão.
+- `test_saida.py`: texto impresso pela refatorada igual ao do professor (com e sem a grade);
+  paralela e distribuída imprimem as mesmas gerações e o mesmo resultado.
+- `test_metricas.py`: *speedup*, eficiência, Karp–Flatt, Amdahl, Gustafson, mediana/desvio e
+  conferência dos hashes, com valores calculados à mão.
+
+Suíte inteira: ~15 s no Windows e ~5 s no Linux (WSL).
 
 ## 5. Melhorias escolhidas
 
@@ -151,7 +164,10 @@ onde cada um marca as suas tarefas.
    - [ ] texto das análises no relatório (item 7).
 7. [ ] **Relatório no Overleaf**. `\todo` pendentes (cópia de 23 nov.): introdução 1 · fundamentação 3
    · sequencial 2 · paralela 4 · distribuída 5 · melhorias 5 (faltam as 6 subseções) ·
-   experimentos 13 · conclusão 6 · apêndice de execução 2. No capítulo de experimentos: preencher
+   experimentos 13 · conclusão 6 · apêndice de execução 2. No capítulo de experimentos (ou no
+   apêndice), um parágrafo sobre a verificação: os 56 testes, o que cada grupo cobre e a
+   conferência por SHA-256 nas baterias; no da distribuída, o descarte de conexões que não são
+   *workers*, os *timeouts* e o que o `tempo_total` mede. No capítulo de experimentos: preencher
    a tabela de ambiente (`tab:ambiente`), descrever os cenários e as repetições, e colocar as
    tabelas, os gráficos e as análises dos itens 5 e 6 (hoje só a fundamentação tem as fórmulas
    de *speedup*, eficiência, Amdahl e Gustafson). Na conclusão, a tabela de contribuições com os
@@ -188,10 +204,10 @@ onde cada um marca as suas tarefas.
     - [ ] **medir** entre 3 máquinas: 2000×2000 com repetições, 1 *worker* por máquina, com e sem
       `--bits`, 2 *workers* por máquina, e os mesmos 3 *workers* em `localhost` para comparar
       (custo da rede real);
-    - [ ] coordenador: o `tempo_total` inclui a espera até os *workers* conectarem (no teste
-      deu 100,9 s, o tempo de abrir os terminais) e precisa começar depois das conexões; uma
-      conexão que não é *worker* (ex.: `Test-NetConnection` na porta 5000) derruba o
-      coordenador com `ConnectionError` em vez de ser descartada;
+    - [x] coordenador: o `tempo_total` começa depois que o último *worker* conecta (antes
+      incluía a espera, 100,9 s no teste) e uma conexão que não é *worker* (ex.:
+      `Test-NetConnection` na porta 5000) é descartada em vez de derrubar o coordenador
+      (`test_robustez.py`);
     - [x] scripts `.ps1`/`.sh` de `distribuido/rede/` mantidos como auxiliares do teste entre
       máquinas (*firewall*, pacote, preparo dos notebooks); a simulação continua com `python -m`.
       O `preparar-no-linux.sh` baixa a `main` por padrão.
@@ -224,3 +240,8 @@ onde cada um marca as suas tarefas.
   conexões que não são *workers*.
 - **23 nov. 2026**: scripts de `distribuido/rede/` mantidos como auxiliares opcionais; agora
   descrevem notebooks (não TV box) e o `preparar-no-linux.sh` baixa a `main` por padrão.
+- **23 nov. 2026**: testes completados (27 → 56) e coordenador corrigido. Conexões que não são
+  *workers* são descartadas (espera de até 10 s pelo OLA) e o `tempo_total` da distribuída começa
+  depois que todos os *workers* conectam; os CSVs antigos da distribuída têm `tempo_total` com a
+  subida dos processos, o `tempo_laco` não mudou. A grade impressa com `--mostrar-grade` ficou
+  idêntica à do professor (espaço no fim da linha).

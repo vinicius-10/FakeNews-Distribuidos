@@ -57,19 +57,46 @@ def validar_workers(parametros, workers):
                          f"de linhas ({parametros.linhas})")
 
 
+def _receber_ola(conexao, timeout_ola):
+    """
+    Lê o OLA de uma conexão recém-aceita e devolve a `porta_halo` do worker.
+
+    Qualquer outra coisa (conexão fechada, silêncio além de `timeout_ola`, tipo
+    de mensagem errado, JSON ou UTF-8 inválido, porta ausente ou fora de
+    1..65535) vira ErroProtocolo: quem chamou descarta a conexão, porque ela
+    não é de um worker (ex.: Test-NetConnection, navegador, scanner de portas).
+    """
+    try:
+        p.configurar(conexao, timeout_ola)
+        _, ola = p.receber_json(conexao, p.OLA)
+    # json.JSONDecodeError e UnicodeDecodeError são ValueError; o timeout do
+    # socket (TimeoutError) e as falhas de conexão são OSError.
+    except (OSError, ValueError, struct.error, p.ErroProtocolo) as erro:
+        raise p.ErroProtocolo(f"{type(erro).__name__}: {erro}") from erro
+    porta = ola.get("porta_halo") if isinstance(ola, dict) else None
+    # bool é subclasse de int em Python: True não pode passar por porta 1.
+    if isinstance(porta, bool) or not isinstance(porta, int) or not 1 <= porta <= 65535:
+        raise p.ErroProtocolo(f"OLA sem porta_halo válida: {ola!r}"[:200])
+    return porta
+
+
 def executar_coordenador(parametros, servidor, workers, bits=False, mostrar=True,
                          mostrar_grade=False, ao_fim_da_geracao=None, verificar=False,
-                         estatisticas=None, animacao=None, timeout=p.TIMEOUT_PADRAO):
+                         estatisticas=None, animacao=None, timeout=p.TIMEOUT_PADRAO,
+                         timeout_ola=p.TIMEOUT_OLA):
     """
     Coordena uma execução com `workers` workers, usando o socket `servidor`.
 
     verificar=True faz os workers enviarem a faixa a cada geração, para o
     callback ao_fim_da_geracao receber a grade inteira (usado pelos testes).
     Devolve o mesmo dicionário de resultado das outras versões.
+
+    `tempo_total` mede só a execução: começa depois que o último worker
+    conecta (entre máquinas, a espera é o tempo de alguém abrir os terminais,
+    não custo do programa) e vai até a coleta do resultado.
     """
     validar_workers(parametros, workers)
     linhas, colunas = parametros.linhas, parametros.colunas
-    inicio_total = time.perf_counter()
     grade, limiares = preparar_estado_inicial(parametros)
     contagem = modelo.contar_faixa(grade, colunas, 1, linhas + 1)
     faixas = modelo.dividir_em_faixas(linhas, workers)
@@ -91,21 +118,33 @@ def executar_coordenador(parametros, servidor, workers, bits=False, mostrar=True
     if mostrar:
         print(f"Aguardando {workers} worker(s); cada um é avisado assim que conecta...")
     try:
-        # 1. Conexão dos workers; o rank é a ordem de chegada.
+        # 1. Conexão dos workers; o rank é a ordem de chegada. Uma conexão que
+        #    não manda um OLA válido é fechada e não gasta um rank.
         enderecos = []
-        for rank in range(workers):
+        while len(conexoes) < workers:
+            rank = len(conexoes)
             with _contexto(f"aceitar conexão do worker {rank}"):
-                conexao, (host, _) = servidor.accept()
-                p.configurar(conexao, timeout)
-                _, ola = p.receber_json(conexao, p.OLA)
-                conexoes.append(conexao)
-                # O vizinho vai se conectar no IP de onde o worker veio, na porta que ele abriu.
-                enderecos.append((host, ola["porta_halo"]))
+                conexao, (host, porta_origem) = servidor.accept()
+            try:
+                porta_halo = _receber_ola(conexao, min(timeout_ola, timeout))
+            except p.ErroProtocolo as erro:
+                conexao.close()
+                if mostrar:
+                    print(f"  conexão de {host}:{porta_origem} descartada "
+                          f"(não é um worker: {erro})", flush=True)
+                continue
+            p.configurar(conexao, timeout)
+            conexoes.append(conexao)
+            # O vizinho vai se conectar no IP de onde o worker veio, na porta que ele abriu.
+            enderecos.append((host, porta_halo))
             # `accept` espera até o timeout (600 s por padrão); avisar a cada
             # conexão evita a impressão de programa travado quando falta subir
             # um dos workers.
             if mostrar:
                 print(f"  worker {rank + 1}/{workers} conectado", flush=True)
+
+        # Todos conectados: só agora o relógio do tempo total começa.
+        inicio_total = time.perf_counter()
 
         # 2. Distribuição das faixas (a grade foi gerada uma vez só, acima).
         for rank, (conexao, (ini, fim)) in enumerate(zip(conexoes, faixas)):
@@ -182,7 +221,8 @@ def executar_coordenador(parametros, servidor, workers, bits=False, mostrar=True
                                                perfil["comunicacao"], perfil["espera"],
                                                perfil["bytes_enviados"])
     if mostrar:
-        imprimir_resultado(tempo, contagem, linhas * colunas, tempo_total)
+        imprimir_resultado(tempo, contagem, linhas * colunas, tempo_total,
+                           "Tempo desde a conexão de todos os workers")
     return {"grade": bytes(grade), "contagem": contagem,
             "geracoes_executadas": geracoes_executadas, "tempo_laco": tempo,
             "tempo_total": tempo_total}

@@ -43,17 +43,24 @@ def imprimir_grade(plana, linhas, colunas, limite=30):
     """Mostra o canto superior esquerdo da grade (para grades pequenas)."""
     for i in range(min(linhas, limite)):
         inicio = (i + 1) * colunas
-        print(" ".join(SIMBOLOS[plana[inicio + j]] for j in range(min(colunas, limite))))
+        # Cada símbolo seguido de um espaço, como o professor (inclusive o último).
+        print("".join(SIMBOLOS[plana[inicio + j]] + " " for j in range(min(colunas, limite))))
     print()
 
 
-def imprimir_resultado(tempo, contagem, total, tempo_total=None):
-    """Imprime o resultado final, como o professor, com o tempo do laço."""
+def imprimir_resultado(tempo, contagem, total, tempo_total=None,
+                       rotulo_total="Tempo incluindo criação de processos/threads"):
+    """
+    Imprime o resultado final, como o professor, com o tempo do laço.
+
+    `rotulo_total` diz o que o `tempo_total` mede em cada versão (na
+    distribuída ele começa depois que todos os workers conectam).
+    """
     print()
     print("=== RESULTADO FINAL ===")
     print(f"Tempo total de execução: {tempo:.4f} segundos")
     if tempo_total is not None:
-        print(f"Tempo incluindo criação de processos/conexões: {tempo_total:.4f} segundos")
+        print(f"{rotulo_total}: {tempo_total:.4f} segundos")
     print(f"Ignorantes finais: {contagem[IGNORANTE]:,} ({contagem[IGNORANTE] / total * 100:,.2f}%)")
     print(f"Espalhadores finais: {contagem[ESPALHADOR]:,} "
           f"({contagem[ESPALHADOR] / total * 100:,.2f}%)")

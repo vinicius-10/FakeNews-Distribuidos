@@ -44,6 +44,11 @@ FORMATO_CONTAGEM = struct.Struct("!4Q")  # 4 inteiros sem sinal de 8 bytes
 
 TIMEOUT_PADRAO = 600  # segundos; toda espera tem limite para virar erro, não travar
 
+# Espera pelo OLA de uma conexão recém-aceita. O worker de verdade manda o OLA
+# logo depois de conectar; uma conexão que fica calada (scanner de portas,
+# Test-NetConnection) é descartada depois deste prazo, sem esperar os 600 s.
+TIMEOUT_OLA = 10
+
 # Teto para a carga anunciada no cabeçalho: a maior mensagem legítima é uma faixa
 # da grade ou um JSON de configuração, muito abaixo disto. Sem teto, um cabeçalho
 # corrompido (ou um par mal-intencionado) faria o recebedor alocar gigabytes.

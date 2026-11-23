@@ -28,7 +28,8 @@ O tempo medido é o do **laço de gerações** (`tempo_laco`), igual nas três
 versões: a grade inicial é gerada antes de começar a contar e, na paralela e na
 distribuída, a criação de processos e as conexões também ficam de fora. O
 `tempo_total` (com criação de processos/conexões) é gravado na mesma linha para
-a análise de custo de inicialização.
+a análise de custo de inicialização. Na distribuída ele começa depois que todos
+os workers conectam (a espera por eles não é custo do programa).
 
 Correção
 --------
