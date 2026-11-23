@@ -202,12 +202,17 @@ Exemplo: `feat(paralelo): divide a grade em faixas de linhas entre processos`.
 
 ## 🧪 Testes
 
-- Os testes ficarão em `testes/` e rodam com
-  `python -m unittest discover -s testes -v`. Só a biblioteca padrão, para funcionar igual em
-  todas as máquinas.
+- Os testes ficam em `testes/` e rodam com
+  `python -m unittest discover -s testes -v` (56 testes, ~15 s). Só a biblioteca padrão, para
+  funcionar igual em todas as máquinas. A lista de arquivos e o que cada um cobre está no README.
 - **Teste de equivalência:** as três versões, com grades pequenas e vários cenários (tamanhos,
   limiar, número de *workers*, divisão não exata das linhas), comparadas geração a geração com a
   sequencial.
+- **Robustez da distribuída** (`test_robustez.py`): *workers* reais em *threads* e *workers*
+  falsos simulam conexões estranhas e falhas; toda espera tem que terminar em erro com contexto,
+  nunca travar.
+- **Teste primeiro** em correção de defeito: o teste novo falha antes da correção pelo motivo
+  esperado e passa depois.
 - Os testes rodam antes de abrir o PR, e o resultado vai na descrição.
 - Quem mexer em processos, sockets ou arquivos roda os testes nos dois sistemas, ou pede que o
   revisor rode no outro.

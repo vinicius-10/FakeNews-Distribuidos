@@ -89,7 +89,7 @@ sudo ufw allow from 192.168.0.0/24 to any app "Python3" 2>/dev/null || \
    python -m unittest discover -s testes
    ```
 
-   Precisa terminar com `OK` (27 testes). Se falhar aí, não adianta seguir.
+   Precisa terminar com `OK` (56 testes). Se falhar aí, não adianta seguir.
 4. Libere o firewall (seção anterior).
 
 ### Linux
@@ -171,7 +171,14 @@ python -m distribuido.worker --coordenador 192.168.0.4:5000 --escutar 0.0.0.0
 Espere `worker 3/3 conectado` e a simulação começa sozinha.
 
 > **Atenção ao número de workers:** `--workers 3` exige exatamente 3 workers conectando (1 local +
-> 2 notebooks). Faltando um, o coordenador espera para sempre. Sobrando, o quarto fica de fora.
+> 2 notebooks). Faltando um, o coordenador espera até o `--timeout` (600 s). Sobrando, o quarto
+> fica de fora.
+
+> **Tempo e conexões estranhas:** o `tempo_total` (linha "Tempo desde a conexão de todos os
+> workers") só começa depois que o último worker conecta; o tempo de abrir os terminais não entra.
+> Uma conexão que não é de worker na porta do coordenador (ex.: `Test-NetConnection -Port 5000`,
+> navegador) é descartada com o aviso `conexão de IP:porta descartada`, sem gastar um rank; a
+> que conecta e não fala nada é descartada depois de 10 s.
 
 ## Validar o resultado
 
@@ -234,6 +241,7 @@ O que **ainda falta** e depende dos notebooks:
 | Worker conecta e trava | firewall do **worker** bloqueando a porta aleatória do halo | libere o `python.exe` também nos notebooks |
 | `não foi possível conectar em 30 s` | IP errado ou coordenador ainda não subiu | confira o IP; o worker tenta de novo por 30 s |
 | Última linha do PC parada em "Aguardando N" | faltou subir um worker / número de workers errado | `--workers` tem de bater com os workers reais |
+| `conexão de IP:porta descartada` | algo que não é worker conectou na porta (teste de porta, navegador) | nada a fazer: o coordenador ignora e continua esperando os workers |
 | Resultado diferente da sequencial | não deveria acontecer | rode `python -m unittest discover -s testes`; se passar, anote o cenário e me traga |
 | Notebook não acha o PC | redes diferentes (Wi-Fi de visitante, VPN) | desligue VPN; confirme que os dois estão em 192.168.0.0/24 |
 

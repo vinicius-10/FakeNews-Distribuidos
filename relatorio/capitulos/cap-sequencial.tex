@@ -133,6 +133,88 @@ O exemplo evidencia dois aspectos que determinam a dinâmica do modelo. Como cad
 
 Além do código fornecido, foi desenvolvida uma versão sequencial refatorada (\texttt{sequencial/fakenews\_sequencial.py}), que usa o mesmo núcleo de cálculo das versões paralela e distribuída (\texttt{comum/modelo.py}). Ela mantém as regras de transição e a grade inicial, gerada pela própria função \texttt{criar\_grade} com a mesma semente, e muda apenas a representação dos dados: a grade passa a ser um vetor de bytes com uma linha de zeros acima e outra abaixo, e duas grades são alternadas entre as gerações, em vez de uma cópia com \texttt{deepcopy} a cada geração. Testes automatizados verificam que ela produz, geração a geração, as mesmas grades que o código original. Essa versão é a linha de base dos experimentos (Seção~\ref{cap:experimentos}), pois executa o mesmo cálculo das versões paralela e distribuída sem nenhum custo de comunicação ou de sincronização; seus detalhes são apresentados na Seção~\ref{cap:melhorias}. A seguir, analisa-se o custo computacional da implementação sequencial.
 
-\section{Análise de custo}
+\section{Análise de custo}\label{sec:custo-sequencial}
 
-\todo{Complexidade $O(L \cdot C)$ por geração; custo do \texttt{deepcopy}; parada antecipada quando não há espalhadores; sensibilidade ao limiar (com $\lambda=3$ a propagação termina em poucas gerações).}
+Esta seção analisa o custo de tempo e de memória da implementação fornecida. Primeiro, o custo é estimado a partir do código; em seguida, a estimativa é comparada com medições, e discute-se como os parâmetros do modelo afetam a duração da simulação. As medições foram feitas com os \textit{scripts} da pasta \texttt{experimentos/} do repositório, sempre com a grade inicial de semente~42.
+
+\subsection{Custo por geração}\label{sub:custo-geracao}
+
+Em cada geração, \texttt{proxima\_geracao} copia a grade com \texttt{deepcopy} e visita uma vez cada uma das $L \cdot C$ células. O trabalho por célula depende do estado: uma célula ignorante chama \texttt{contar\_vizinhos\_espalhadores}, que percorre os nove deslocamentos da vizinhança, descarta o central e testa se cada vizinho está dentro da grade antes de consultá-lo, enquanto um espalhador ou um inativo exige apenas a comparação do estado e uma atribuição. Em seguida, \texttt{contar\_estados} percorre a grade inteira mais uma vez. Sendo $N_I$ o número de células ignorantes na geração, o tempo de uma geração pode ser escrito como
+\begin{equation}\label{eq:custo-geracao}
+    T_{\mathrm{ger}} \approx c_I \, N_I + c_O \, (L C - N_I) + (c_{\mathrm{cop}} + c_{\mathrm{cont}}) \, L C ,
+\end{equation}
+em que $c_I$ e $c_O$ são os custos de visitar uma célula ignorante e uma célula de outro estado, e $c_{\mathrm{cop}}$ e $c_{\mathrm{cont}}$ são os custos por célula da cópia e da contagem. Todos os termos são proporcionais ao tamanho da grade; logo, uma geração custa $\Theta(L \cdot C)$, e a simulação inteira custa $\Theta(G_{\mathrm{ef}} \cdot L \cdot C)$, em que $G_{\mathrm{ef}} \le G$ é o número de gerações efetivamente executadas, que pode ser menor que o pedido por causa da parada antecipada.
+
+A memória também cresce com $L \cdot C$. A grade é uma lista de listas de inteiros; no CPython, cada posição de uma lista guarda uma referência de 8~bytes para um objeto inteiro, e os inteiros pequenos, como 0, 1 e 2, são objetos compartilhados. Por isso, a grade ocupa cerca de 8,9~bytes por célula, quase todos gastos com referências: 8,45~MiB para uma grade de $1000 \times 1000$, medidos com o módulo \texttt{tracemalloc}. Durante \texttt{proxima\_geracao}, a grade atual e a cópia existem ao mesmo tempo, e a memória ocupada dobra, chegando a cerca de 17~MiB nessa grade. Para comparação, a mesma grade guardada como vetor de bytes, como na versão refatorada, ocupa cerca de 1~byte por célula.
+
+\subsection{Medições}\label{sub:custo-medicoes}
+
+Para verificar a estimativa, a Tabela~\ref{tab:custo-escala} mostra o tempo do laço de gerações do código fornecido em três tamanhos de grade, com 20~gerações, 5\% de espalhadores e limiar~2, sem impressão no terminal. As medições foram feitas em um processador Intel Core i9-12900F, com Windows~11 e Python~3.11.7, e o valor apresentado é a mediana de três repetições.
+
+\begin{table}[htb]
+    \centering
+    \caption{Tempo do laço de gerações do código fornecido conforme o tamanho da grade}
+    \label{tab:custo-escala}
+    \begin{tabular}{lrrrr}
+        \toprule
+        \textbf{Grade} & \textbf{Células} & \textbf{Tempo (s)} & \textbf{Por geração (s)} & \textbf{Por célula e geração ($\mu$s)} \\
+        \midrule
+        $500 \times 500$   & 250\,000     & 4,16  & 0,208 & 0,83 \\
+        $1000 \times 1000$ & 1\,000\,000  & 16,46 & 0,823 & 0,82 \\
+        $2000 \times 2000$ & 4\,000\,000  & 65,88 & 3,294 & 0,82 \\
+        \bottomrule
+    \end{tabular}
+    \fonte{}
+\end{table}
+
+Quando o número de células é multiplicado por quatro, o tempo também é multiplicado por quatro, e o tempo por célula e por geração permanece em torno de 0,82~$\mu$s: o custo cresce linearmente com $L \cdot C$, como previsto. Esse valor corresponde a milhares de ciclos de relógio do processador por célula, o que reflete o custo de interpretar o código Python, em que cada acesso a uma lista, comparação ou chamada de função é executado pelo interpretador.
+
+A Tabela~\ref{tab:custo-perfil} mostra como o tempo de uma geração se divide entre as etapas. Essa medição foi feita em outra máquina (Intel Core i7-13650HX, Windows~11, Python~3.12.10), na grade de $1000 \times 1000$ e com os mesmos parâmetros, e o valor apresentado é a mediana de cinco repetições, após uma execução de aquecimento descartada. Como o \texttt{deepcopy} ocorre dentro de \texttt{proxima\_geracao} e o código fornecido não foi alterado, a cópia foi medida à parte, sobre uma cópia da mesma grade, e o tempo da varredura foi obtido por diferença; os valores dessas duas linhas são, portanto, estimativas.
+
+\begin{table}[htb]
+    \centering
+    \caption{Divisão do tempo de uma geração do código fornecido}
+    \label{tab:custo-perfil}
+    \begin{tabular}{lrr}
+        \toprule
+        \textbf{Etapa} & \textbf{Por geração (s)} & \textbf{Participação (\%)} \\
+        \midrule
+        Varredura das células                           & 0,638 & 74,6 \\
+        Cópia da grade (\texttt{deepcopy})              & 0,179 & 21,0 \\
+        Contagem dos estados (\texttt{contar\_estados}) & 0,038 & 4,4 \\
+        \midrule
+        Total                                          & 0,855 & 100,0 \\
+        \bottomrule
+    \end{tabular}
+    \fonte{}
+\end{table}
+
+A varredura das células responde por cerca de três quartos do tempo, e a cópia, por cerca de um quinto. A cópia não contribui para o cálculo: ela pode ser evitada alternando duas grades entre as gerações, como faz a versão refatorada, cujo ganho é apresentado na Seção~\ref{cap:melhorias}.
+
+O perfil também confirma que o custo depende do estado das células. Ao longo das 20~gerações, o número de ignorantes cai de cerca de 951~mil para 440~mil, e o tempo da varredura cai junto, com correlação de 0,999. Ajustando uma reta pelo método dos mínimos quadrados ao tempo da varredura em função do número de ignorantes, conforme a Equação~\ref{eq:custo-geracao}, obtêm-se $c_I \approx 1,02$~$\mu$s por célula ignorante e $c_O \approx 0,06$~$\mu$s por célula nos demais estados. Como $c_O$ vem do prolongamento da reta até $N_I = 0$, fora da faixa medida, seu valor é menos preciso que o de $c_I$; ainda assim, visitar um ignorante custa mais de dez vezes o que custa visitar uma célula de outro estado. Essa diferença faz com que regiões da grade com mais ignorantes demorem mais para ser calculadas, o que é a origem do desbalanceamento de carga discutido nas versões paralela e distribuída.
+
+\subsection{Influência dos parâmetros}\label{sub:custo-parametros}
+
+Como o custo total é $\Theta(G_{\mathrm{ef}} \cdot L \cdot C)$, o número de gerações efetivamente executadas também pesa, e ele depende fortemente do limiar e do percentual inicial de espalhadores. A Tabela~\ref{tab:custo-limiar} mostra, para a grade de $1000 \times 1000$, quantas gerações a simulação dura até não haver mais espalhadores e qual fração da população deixou de ser ignorante (alcance); em cada célula da tabela, o primeiro número é a quantidade de gerações e o valor entre parênteses é o alcance. Esses valores não dependem da máquina e foram obtidos com a versão refatorada, que produz as mesmas grades que o código fornecido.
+
+\begin{table}[htb]
+    \centering
+    \caption{Gerações até a propagação terminar e alcance final, conforme o limiar e o percentual inicial de espalhadores}
+    \label{tab:custo-limiar}
+    \begin{tabular}{lrrrr}
+        \toprule
+        \textbf{Limiar} & \textbf{1\%} & \textbf{2\%} & \textbf{5\%} & \textbf{10\%} \\
+        \midrule
+        $\lambda = 1$ & 27 (100,0\%) & 15 (100,0\%) & 10 (100,0\%) & 7 (100,0\%) \\
+        $\lambda = 2$ & 264 (14,3\%) & 163 (25,2\%) & 56 (57,9\%) & 29 (90,8\%) \\
+        $\lambda = 3$ & 2 (1,0\%) & 3 (2,0\%) & 3 (5,4\%) & 4 (12,8\%) \\
+        \bottomrule
+    \end{tabular}
+    \fonte{}
+\end{table}
+
+Com $\lambda = 1$, um único vizinho espalhador basta, e a notícia alcança toda a população em poucas gerações. Com $\lambda = 3$, é raro uma célula ter três vizinhos espalhadores ao mesmo tempo, e a propagação termina em até quatro gerações, alcançando pouco mais que os espalhadores iniciais. Com $\lambda = 2$, a simulação é a mais longa, chegando a 264~gerações com 1\% de espalhadores, e o alcance varia de 14\% a 91\% conforme o percentual inicial. Por isso, os parâmetros usados no bloco principal do código fornecido ($\lambda = 3$ e 5\%) encerram a simulação em três gerações e não servem para medir desempenho. Nos experimentos (Seção~\ref{cap:experimentos}), foram usados $\lambda = 2$ e 5\% de espalhadores com 20~gerações: como, nesse cenário, a propagação dura 56~gerações, todas as execuções completam as 20~gerações, e o trabalho medido é o mesmo em todas as versões.
+
+\subsection{Potencial de paralelização}\label{sub:custo-paralelizacao}
+
+A análise também indica o que pode ser paralelizado. O novo estado de cada célula depende apenas da geração anterior; portanto, as $L \cdot C$ atualizações de uma geração são independentes entre si e podem ser divididas entre vários trabalhadores, sem comunicação durante o cálculo. A contagem dos estados também pode ser feita por partes e somada ao final. A dependência existe apenas entre gerações: a geração $t+1$ só pode começar quando a geração $t$ estiver completa, e a decisão de parada exige a soma das contagens de toda a grade. Essas duas restrições definem os pontos de sincronização das versões paralela e distribuída, apresentadas nas seções~\ref{cap:paralela} e~\ref{cap:distribuida}.

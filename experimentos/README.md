@@ -106,6 +106,12 @@ O `tempo_total_s` (que inclui criação de processos e conexões) vai na mesma
 linha do CSV para a análise de custo de inicialização — é ele que mostra por
 que vale a pena reaproveitar os *workers* entre gerações.
 
+> **Atenção (desde 23 nov. 2026):** na distribuída, o `tempo_total_s` passou a
+> começar **depois que todos os *workers* conectam** (distribuição das faixas,
+> conexão dos vizinhos, laço e coleta). Os CSVs medidos antes disso incluem a
+> subida dos processos *worker* na distribuída; não compare `tempo_total_s`
+> antigo com novo nessa versão. O `tempo_laco_s` (base do *speedup*) não mudou.
+
 ### Correção verificada a cada execução
 
 Cada execução grava o **SHA-256 da grade final**. Como todas as versões têm de

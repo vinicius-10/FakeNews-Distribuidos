@@ -180,7 +180,17 @@ As melhorias do modelo (resistência e bots) ficam desligadas por padrão, para 
 ```bash
 python -m unittest discover -s testes -v
 ```
-Comparam as versões refatorada, paralela (processos e threads) e distribuída com a versão do professor, geração a geração, em vários tamanhos, limiares e números de *workers*; com as melhorias ligadas, comparam com a sequencial refatorada.
+56 testes, só com a biblioteca padrão (rodam iguais no Windows e no Linux):
+
+| Arquivo | O que confere |
+|---|---|
+| `test_modelo.py` | núcleo comum igual ao professor (bordas, faixas, várias gerações), conversões, borda em bits, melhorias do modelo |
+| `test_equivalencia.py` | refatorada, paralela (processos e threads) e distribuída iguais ao professor geração a geração; com as melhorias ligadas, iguais à sequencial refatorada |
+| `test_protocolo.py` | mensagens grandes e vazias, JSON, conexão fechada no meio, tipo errado |
+| `test_robustez.py` | distribuída: conexões que não são *workers* são descartadas, `tempo_total` sem a espera pelos *workers*, *worker* que cai ou trava vira erro com a geração |
+| `test_melhorias_saida.py` | estatísticas e animação não mudam a grade, batem com o professor e gravam os arquivos certos |
+| `test_saida.py` | texto impresso igual ao do professor; paralela e distribuída imprimem as mesmas gerações e o mesmo resultado |
+| `test_metricas.py` | fórmulas da análise: *speedup*, eficiência, Karp–Flatt, Amdahl, Gustafson, mediana e conferência dos hashes |
 
 ### Experimentos
 ```bash
