@@ -13,9 +13,9 @@ arquivo** (tabela, checklist e histórico) no mesmo PR.
 | Sequencial refatorada | ✅ feita e testada | [`sequencial/fakenews_sequencial.py`](../sequencial/fakenews_sequencial.py) + [`comum/`](../comum/) |
 | Paralela (processos e threads) | ✅ feita e testada | [`paralelo/fakenews_paralelo.py`](../paralelo/fakenews_paralelo.py) |
 | Distribuída (sockets TCP) | ✅ feita e testada | [`distribuido/`](../distribuido/) |
-| Testes de equivalência | ✅ 27 testes passando | [`testes/`](../testes/) |
+| Testes de equivalência | ✅ 27 testes passando (Windows e Linux) | [`testes/`](../testes/) |
 | 6 melhorias | ✅ implementadas · ❌ não medidas · ❌ não escritas no relatório | [seção 5](#5-melhorias-escolhidas) |
-| Experimentos de desempenho | ❌ não começados | — |
+| Experimentos de desempenho | 🔄 em andamento (outro integrante) | — |
 | Relatório (Overleaf) | 🔄 fundamentação avançou; o resto tem `\todo` | [`relatorio/`](../relatorio/) (cópia) |
 | Slides (PDF) | ❌ não começados | — |
 | Vídeo 10–15 min | ❌ não gravado | — |
@@ -109,9 +109,10 @@ Esta lista acompanha o [roadmap do grupo](https://claude.ai/artifact/X6U3gNTZ2Fd
 onde cada um marca as suas tarefas.
 
 0. [ ] **Confirmar o prazo de entrega e o número do grupo** (o número vai no nome do vídeo).
-1. [ ] **Abrir o PR** de `feat/implementacoes-codigo` para a `main` e conseguir 1 aprovação.
-   - [ ] revisar se todo o código está comentado em português;
-   - [ ] conferir se o README tem as instruções de execução das três versões (Windows e Linux).
+1. [ ] **PR [#3](https://github.com/vinicius-10/FakeNews-Distribuidos/pull/3)** de
+   `feat/implementacoes-codigo` para a `main`: aberto, falta 1 aprovação e o merge.
+   - [x] revisar se todo o código está comentado em português;
+   - [x] conferir se o README tem as instruções de execução das três versões (Windows e Linux).
 2. [ ] **Script de experimentos** em Python (`experimentos/`). Hoje o código já mede o tempo do
    laço (`tempo_laco`) e o tempo total com criação de processos/conexões (`tempo_total`), e já
    aceita os parâmetros de cada cenário; falta o script que roda tudo e calcula as métricas:
@@ -166,8 +167,10 @@ onde cada um marca as suas tarefas.
     - [ ] conferir o formato: MP4, H.264 1280×720 a 30 fps, AAC estéreo 44,1 kHz, sem marca
       d'água, edição só para cortar (cada erro de formato tira 0,5);
     - [ ] nome do arquivo `AAAA-MM-DD - Grupo XX - FakeNews.mp4`.
-11. [ ] Rodar paralela e distribuída também no **Linux** e, se possível, a distribuída entre 2 ou
-    mais máquinas reais.
+11. [ ] Rodar em outros ambientes:
+    - [x] **Linux**: testes e as três versões rodados no Ubuntu (WSL, Python 3.12.3), com o mesmo
+      resultado do Windows;
+    - [ ] (se possível) a distribuída entre 2 ou mais máquinas reais.
 12. [ ] **Entrega**:
     - [ ] montar o **ZIP** com código, instruções, PDF dos slides e vídeo (ou link na nuvem
       acessível até o fim da avaliação);
@@ -182,3 +185,7 @@ onde cada um marca as suas tarefas.
   e as referências. Nenhum experimento rodado.
 - **23 nov. 2026**: checklist detalhada com as métricas e análises de desempenho pedidas no
   enunciado e alinhada ao roadmap do grupo (slides, vídeo e entrega).
+- **23 nov. 2026**: PR #3 aberto; código revisado (comentários em português, README completo).
+  Testes e as três versões rodados no Linux (Ubuntu no WSL), iguais ao Windows: 27 testes passando
+  e, em 400×400 com limiar 2, a mesma contagem final em todas as versões. Experimentos passaram
+  para outro integrante.
