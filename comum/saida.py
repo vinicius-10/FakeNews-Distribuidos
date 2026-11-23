@@ -43,7 +43,8 @@ def imprimir_grade(plana, linhas, colunas, limite=30):
     """Mostra o canto superior esquerdo da grade (para grades pequenas)."""
     for i in range(min(linhas, limite)):
         inicio = (i + 1) * colunas
-        print(" ".join(SIMBOLOS[plana[inicio + j]] for j in range(min(colunas, limite))))
+        # Cada símbolo seguido de um espaço, como o professor (inclusive o último).
+        print("".join(SIMBOLOS[plana[inicio + j]] + " " for j in range(min(colunas, limite))))
     print()
 
 

@@ -1,11 +1,23 @@
 """
-Funções de apoio dos testes: referência do professor e comparação de grades.
+Funções de apoio dos testes: referência do professor, comparação de grades e
+captura do que é impresso.
 
 A referência de comportamento é o código sequencial do professor
 (sequencial/fakenews_sequencial_original.py), usado aqui sem nenhuma alteração.
 """
 
+import contextlib
+import io
+
 from sequencial import fakenews_sequencial_original as professor
+
+
+def capturar_saida(funcao, *args, **kwargs):
+    """Executa funcao(*args, **kwargs) e devolve (texto impresso, valor devolvido)."""
+    buffer = io.StringIO()
+    with contextlib.redirect_stdout(buffer):
+        resultado = funcao(*args, **kwargs)
+    return buffer.getvalue(), resultado
 
 
 def geracoes_do_professor(linhas, colunas, geracoes, percentual, limiar, semente=42):
