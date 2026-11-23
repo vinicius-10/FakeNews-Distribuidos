@@ -16,7 +16,7 @@ arquivo** (tabela, checklist e histórico) no mesmo PR.
 | Testes | ✅ 56 testes passando (Windows e Linux): equivalência, protocolo, robustez, melhorias 2 e 3, saída, métricas | [`testes/`](../testes/) |
 | 6 melhorias | ✅ implementadas · ✅ medidas · ❌ não escritas no relatório | [seção 5](#5-melhorias-escolhidas) |
 | Experimentos de desempenho | ✅ medidos numa máquina (localhost) · 🔄 3 máquinas: conexão ok, falta medir | [`experimentos/`](../experimentos/) |
-| Relatório (Overleaf) | 🔄 fundamentação avançou; o resto tem `\todo` | [`relatorio/`](../relatorio/) (cópia) |
+| Relatório (Overleaf) | 🔄 fundamentação e seção 3 (sequencial) escritas; o resto tem `\todo` | [`relatorio/`](../relatorio/) (cópia) |
 | Slides (PDF) | ❌ não começados | — |
 | Vídeo 10–15 min | ❌ não gravado | — |
 | ZIP final | ❌ | — |
@@ -150,6 +150,11 @@ onde cada um marca as suas tarefas.
      sem ganho de tempo em `localhost` (o ganho só aparece numa rede real).
 4. [x] **Medir o efeito das melhorias do modelo** (`resultados/modelo.md`): resistência 1–3
    aumenta o alcance em +17 p.p.; resistência 3–5 derruba para 5%; *bots* 2% levam a 93%.
+   - [x] **custo da sequencial do professor** (`resultados/custo_sequencial.md`, script
+     `custo_sequencial.py`): varredura 75%, `deepcopy` 21% e contagem 4% do tempo de uma
+     geração; célula ignorante ~1,02 µs contra ~0,06 µs dos outros estados; limiar ×
+     percentual em 1000×1000; memória de 8,9 bytes por célula (lista de listas) contra 1,04
+     (vetor de bytes). Medido no i7-13650HX; usado na seção 3.4 do relatório.
 5. [x] **Tabelas e gráficos** gerados por script (`resultados/tabelas.md` e
    `resultados/graficos/`: *speedup*, eficiência, GIL, melhorias e modelo).
 6. [ ] **Análises pedidas no enunciado**: os dados estão medidos; falta escrever a interpretação
@@ -162,9 +167,10 @@ onde cada um marca as suas tarefas.
      eficiência caindo acima de 8 *workers* (núcleos P/E) e speedup superlinear com 2 *workers*
      (cache);
    - [ ] texto das análises no relatório (item 7).
-7. [ ] **Relatório no Overleaf**. `\todo` pendentes (cópia de 23 nov.): introdução 1 · fundamentação 3
-   · sequencial 2 · paralela 4 · distribuída 5 · melhorias 5 (faltam as 6 subseções) ·
-   experimentos 13 · conclusão 6 · apêndice de execução 2. No capítulo de experimentos (ou no
+7. [ ] **Relatório no Overleaf**. `\todo` pendentes (cópia de 23 nov., commit `139cd2b`):
+   introdução 1 · paralela 4 · distribuída 5 · melhorias 5 (faltam as 6 subseções) ·
+   experimentos 13 · conclusão 6 · apêndice de execução 2. Fundamentação e seção 3 (sequencial:
+   funcionamento com fluxograma e exemplo passo a passo, e análise de custo) estão completas. No capítulo de experimentos (ou no
    apêndice), um parágrafo sobre a verificação: os 56 testes, o que cada grupo cobre e a
    conferência por SHA-256 nas baterias; no da distribuída, o descarte de conexões que não são
    *workers*, os *timeouts* e o que o `tempo_total` mede. No capítulo de experimentos: preencher
@@ -245,3 +251,6 @@ onde cada um marca as suas tarefas.
   depois que todos os *workers* conectam; os CSVs antigos da distribuída têm `tempo_total` com a
   subida dos processos, o `tempo_laco` não mudou. A grade impressa com `--mostrar-grade` ficou
   idêntica à do professor (espaço no fim da linha).
+- **23 nov. 2026**: seção 3 do relatório escrita (3.3 funcionamento da sequencial, com fluxograma e
+  exemplo 5×5 passo a passo; 3.4 análise de custo). Novo `experimentos/custo_sequencial.py` mede o
+  custo do código do professor (perfil por etapa, custo por estado, limiar × percentual e memória).
