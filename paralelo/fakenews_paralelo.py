@@ -60,18 +60,55 @@ def laco_trabalhador(ident, buffers, limiares, colunas, inicio, fim, limiar, ger
     buffers são as duas grades (com moldura); inicio/fim são as linhas reais da
     faixa (fim exclusivo). Ao terminar, envia (ident, tempo de cálculo, tempo de
     espera, erro) pela fila `resultados`.
+
+    Cópia local ("janela") por geração
+    ----------------------------------
+    A grade compartilhada é acessada por um objeto de memória compartilhada
+    (memoryview), e cada acesso elementar a ele custa mais que o de um bytearray
+    comum. Medido neste projeto: a versão paralela com 1 trabalhador era 6% a 12%
+    mais lenta que a sequencial fazendo exatamente o mesmo cálculo, e a
+    distribuída (que trabalha num bytearray local) vencia a paralela mesmo com o
+    custo de socket.
+
+    Por isso o worker copia só a própria faixa mais as duas linhas de halo
+    (:meth:`bytearray` local, uma cópia em C, barata) e calcula ali. Depois
+    devolve ao bloco compartilhado apenas as linhas que são dele, que é o que os
+    vizinhos leem no halo. A comunicação continua sendo por memória
+    compartilhada; muda só a estrutura onde o laço quente trabalha.
     """
     calculo = espera = 0.0
+    altura = fim - inicio
+    # Janela = halo de cima + linhas próprias + halo de baixo.
+    janela_ini = inicio * colunas
+    janela_fim = (fim + 2) * colunas
+    tamanho_janela = janela_fim - janela_ini
+    propria_ini = colunas               # primeira linha própria dentro da janela
+    propria_fim = (altura + 1) * colunas
     try:
         barreira.wait()  # largada: todos começam juntos, depois de criados
+        # Os limiares não mudam durante a simulação: uma cópia só, antes do laço.
+        limiares_locais = (bytearray(limiares[janela_ini:janela_fim])
+                           if limiares is not None else None)
+        local = [bytearray(tamanho_janela), bytearray(tamanho_janela)]
+        local[0][:] = buffers[0][janela_ini:janela_fim]  # estado inicial da janela
         for geracao in range(1, geracoes + 1):
             t0 = time.perf_counter()
             atual = buffers[(geracao - 1) % 2]
             nova = buffers[geracao % 2]
-            # +1: a linha real r fica na linha r + 1 do vetor (moldura).
-            modelo.calcular_faixa(atual, nova, colunas, inicio + 1, fim + 1, limiar, limiares)
-            contagens[4 * ident:4 * ident + 4] = modelo.contar_faixa(nova, colunas,
-                                                                      inicio + 1, fim + 1)
+            local_atual = local[(geracao - 1) % 2]
+            local_nova = local[geracao % 2]
+            if geracao > 1:
+                # As linhas de halo foram reescritas pelos vizinhos na geração
+                # anterior: recarrega só as duas bordas, não a faixa inteira.
+                local_atual[0:colunas] = atual[janela_ini:janela_ini + colunas]
+                local_atual[propria_fim:tamanho_janela] = atual[(fim + 1) * colunas:janela_fim]
+            modelo.calcular_faixa(local_atual, local_nova, colunas, 1, altura + 1, limiar,
+                                  limiares_locais)
+            contagens[4 * ident:4 * ident + 4] = modelo.contar_faixa(
+                local_nova, colunas, 1, altura + 1)
+            # Devolve as linhas próprias ao bloco compartilhado para os vizinhos.
+            nova[(inicio + 1) * colunas:(fim + 1) * colunas] = \
+                local_nova[propria_ini:propria_fim]
             t1 = time.perf_counter()
             barreira.wait()  # A: a faixa e a contagem desta geração estão prontas
             barreira.wait()  # B: o principal já decidiu se continua
@@ -122,24 +159,32 @@ class _Recursos:
         self.blocos = []
         self.views = []
         tamanho = len(grade)
-        if modo == "processos":
-            # spawn explícito: mesmo comportamento no Windows e no Linux.
-            self.ctx = mp.get_context("spawn")
-            # Grade atual (inicial) e grade próxima, que começa zerada; a
-            # moldura de zeros das duas nunca é escrita depois.
-            self.buffers = [self._novo_bloco(grade), self._novo_bloco(bytes(tamanho))]
-            self.limiares = self._novo_bloco(limiares) if limiares is not None else None
-            self.contagens = self.ctx.Array("q", 4 * trabalhadores, lock=False)
-            self.continuar = self.ctx.Value("b", 1, lock=False)
-            self.barreira = self.ctx.Barrier(trabalhadores + 1, timeout=timeout)
-            self.resultados = self.ctx.Queue()
-        else:
-            self.buffers = [bytearray(grade), bytearray(tamanho)]
-            self.limiares = limiares
-            self.contagens = [0] * (4 * trabalhadores)
-            self.continuar = SimpleNamespace(value=1)
-            self.barreira = threading.Barrier(trabalhadores + 1, timeout=timeout)
-            self.resultados = queue.Queue()
+        try:
+            if modo == "processos":
+                # spawn explícito: mesmo comportamento no Windows e no Linux.
+                self.ctx = mp.get_context("spawn")
+                # Grade atual (inicial) e grade próxima, que começa zerada; a
+                # moldura de zeros das duas nunca é escrita depois.
+                self.buffers = [self._novo_bloco(grade), self._novo_bloco(bytes(tamanho))]
+                self.limiares = self._novo_bloco(limiares) if limiares is not None else None
+                self.contagens = self.ctx.Array("q", 4 * trabalhadores, lock=False)
+                self.continuar = self.ctx.Value("b", 1, lock=False)
+                self.barreira = self.ctx.Barrier(trabalhadores + 1, timeout=timeout)
+                self.resultados = self.ctx.Queue()
+            else:
+                self.buffers = [bytearray(grade), bytearray(tamanho)]
+                self.limiares = limiares
+                self.contagens = [0] * (4 * trabalhadores)
+                self.continuar = SimpleNamespace(value=1)
+                self.barreira = threading.Barrier(trabalhadores + 1, timeout=timeout)
+                self.resultados = queue.Queue()
+        except BaseException:
+            # Se algo falhar no meio (por exemplo, um parâmetro inválido), os
+            # blocos de memória compartilhada já criados precisam ser devolvidos
+            # aqui: sem isso o processo termina com "BufferError: cannot close
+            # exported pointers exist" e deixa o bloco preso no sistema.
+            self.liberar()
+            raise
 
     def _novo_bloco(self, conteudo):
         """Cria um bloco de memória compartilhada com uma cópia de `conteudo`."""
@@ -175,7 +220,14 @@ def executar_simulacao(parametros, trabalhadores=None, modo="processos", mostrar
     """
     if modo not in ("processos", "threads"):
         raise ValueError("modo deve ser 'processos' ou 'threads'")
-    trabalhadores = trabalhadores or os.cpu_count() or 1
+    # `None` significa "usa todos os núcleos". Zero ou negativo é erro do
+    # chamador: antes o zero caía calado em cpu_count (confundia os
+    # experimentos) e o negativo estourava num ponto obscuro do Barrier.
+    if trabalhadores is None:
+        trabalhadores = os.cpu_count() or 1
+    if trabalhadores < 1:
+        raise ValueError(f"o número de trabalhadores precisa ser pelo menos 1 "
+                         f"(recebido {trabalhadores})")
     linhas, colunas = parametros.linhas, parametros.colunas
     # A grade inicial é gerada uma vez só, aqui, e depois dividida.
     grade, limiares = preparar_estado_inicial(parametros)
@@ -207,8 +259,14 @@ def executar_simulacao(parametros, trabalhadores=None, modo="processos", mostrar
             w.start()
             workers.append(w)
         fim_vigia = threading.Event()
+        # Preenchida pelo vigia quando um processo morre de forma anormal. O
+        # worker morto não deixa mensagem na fila, então sem isso a mensagem de
+        # erro mostraria só os BrokenBarrierError dos sobreviventes, sem dizer
+        # quem caiu.
+        mortos = []
         if modo == "processos":
-            threading.Thread(target=_vigiar_processos, args=(workers, rec.barreira, fim_vigia),
+            threading.Thread(target=_vigiar_processos,
+                             args=(workers, rec.barreira, fim_vigia, mortos),
                              daemon=True).start()
 
         geracoes_executadas = 0
@@ -240,9 +298,15 @@ def executar_simulacao(parametros, trabalhadores=None, modo="processos", mostrar
                     break
             tempo = time.perf_counter() - inicio
         except threading.BrokenBarrierError:
-            raise RuntimeError("um worker falhou:\n" + _erros_dos_workers(rec)) from None
+            raise RuntimeError(_mensagem_de_falha(rec, mortos, modo, geracoes_executadas)) from None
 
-        perfis = sorted(rec.resultados.get(timeout=timeout) for _ in workers)
+        try:
+            perfis = sorted(rec.resultados.get(timeout=timeout) for _ in workers)
+        except queue.Empty:
+            # Um worker morreu depois da última barreira: sem esta mensagem o
+            # erro que aparecia era só "queue.Empty", sem dizer o que aconteceu.
+            raise RuntimeError(_mensagem_de_falha(rec, mortos, modo,
+                                                  geracoes_executadas)) from None
         for w in workers:
             w.join(timeout)
         erros = [erro for *_, erro in perfis if erro]
@@ -271,19 +335,45 @@ def executar_simulacao(parametros, trabalhadores=None, modo="processos", mostrar
             "tempo_total": tempo_total}
 
 
-def _vigiar_processos(workers, barreira, fim):
+def _vigiar_processos(workers, barreira, fim, mortos):
     """
     Aborta a barreira se algum processo morrer sem avisar.
 
     Um processo que morre antes de entrar no laço (por exemplo, erro de import
-    no spawn) nunca chega à barreira, e o principal esperaria até o timeout.
-    Esta thread confere os processos a cada meio segundo e quebra a barreira,
-    o que transforma a espera em erro imediato.
+    no spawn) ou que é morto no meio do cálculo nunca chega à barreira, e o
+    principal esperaria até o timeout. Esta thread confere os processos a cada
+    meio segundo, anota em `mortos` quem caiu e com que código, e quebra a
+    barreira — o que transforma a espera em erro imediato e explicado.
     """
     while not fim.wait(0.5):
-        if any(w.exitcode not in (None, 0) for w in workers):
+        caidos = [(w.name, w.exitcode) for w in workers if w.exitcode not in (None, 0)]
+        if caidos:
+            mortos.extend(caidos)
             barreira.abort()
             return
+
+
+def _mensagem_de_falha(rec, mortos, modo, geracao):
+    """
+    Monta o texto do erro dizendo o que se sabe: quem morreu e o que os
+    sobreviventes reportaram.
+
+    Sem isso, o erro que aparecia era uma pilha de BrokenBarrierError dos
+    workers que estavam vivos, o que esconde a causa (o worker que caiu).
+    """
+    partes = []
+    if mortos:
+        quem = ", ".join(f"{nome} (código de saída {codigo})" for nome, codigo in mortos)
+        partes.append(f"o processo {quem} morreu durante a geração {geracao}")
+    elif modo == "processos":
+        partes.append(f"a barreira estourou o tempo na geração {geracao} "
+                      "e nenhum processo terminou de forma anormal")
+    else:
+        partes.append(f"uma thread não chegou à barreira na geração {geracao}")
+    erros = _erros_dos_workers(rec)
+    if erros:
+        partes.append(erros)
+    return "\n".join(partes)
 
 
 def _erros_dos_workers(rec):
