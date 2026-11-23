@@ -141,9 +141,9 @@ onde cada um marca as suas tarefas.
    - [x] variar tamanho da grade (500², 1000², 2000²) e nº de processos/*threads*/*workers*
      (1 a 24), com limiar 2;
    - [ ] variar **gerações** e **% de espalhadores** (o `medir.py` já aceita `--geracoes` e
-     `--percentual`; as baterias usaram só 20 gerações e 5%). 🔄 Em andamento na branch
-     `feat/bateria-parametros` (Rafael, ainda sem PR): bateria que varia percentual e limiar nas
-     três versões; gerações ainda não;
+     `--percentual`; as baterias usaram só 20 gerações e 5%). Percentual e limiar: PR
+     [#11](https://github.com/vinicius-10/FakeNews-Distribuidos/pull/11) (`experimentos/bateria.py`);
+     gerações ainda não;
    - [x] rodar **os mesmos cenários nas três versões**; o SHA-256 da grade final confirma que
      todas deram o mesmo resultado em todas as execuções;
    - [x] 1 execução de aquecimento descartada + repetições, reportando a mediana (5 ou mais na
@@ -163,6 +163,13 @@ onde cada um marca as suas tarefas.
      geração; célula ignorante ~1,02 µs contra ~0,06 µs dos outros estados; limiar ×
      percentual em 1000×1000; memória de 8,9 bytes por célula (lista de listas) contra 1,04
      (vetor de bytes). Medido no i7-13650HX; usado na seção 3.4 do relatório.
+   - [x] **mesma bateria num notebook com Linux** (i5-1240P, Fedora 44, Python 3.12.16):
+     [`resultados/linux-i5/`](../experimentos/resultados/linux-i5/LEIA-ME.md). 1000², 1 a 16
+     *workers*, 5 repetições, todas com a mesma grade. Professor 14,40 s, refatorada 4,50 s
+     (3,2×). *Speedup* do laço máximo de 4,46 (paralela, 12 processos) e 4,56 (distribuída,
+     12 *workers*); eficiência cai para 0,71 já com 4 *workers* e o ganho para em 12 (12 núcleos
+     físicos, só 4 P). *Threads*: 0,88–0,99, como no Windows. Fica numa tabela à parte, sem
+     misturar com o PC do grupo;
 5. [x] **Tabelas e gráficos** gerados por script (`resultados/tabelas.md` e
    `resultados/graficos/`: *speedup*, eficiência, GIL, melhorias e modelo).
 6. [ ] **Análises pedidas no enunciado**: os dados estão medidos; falta escrever a interpretação
@@ -267,6 +274,7 @@ onde cada um marca as suas tarefas.
   exemplo 5×5 passo a passo; 3.4 análise de custo). Novo `experimentos/custo_sequencial.py` mede o
   custo do código do professor (perfil por etapa, custo por estado, limiar × percentual e memória).
 - **23 nov. 2026**: `main` depois do PR #9 conferida em Linux nativo (Fedora, i5-1240P): 56 testes
-  OK com Python 3.12 e 3.14 e as três versões com o mesmo resultado. Registrados a bateria de
-  percentual e limiar em andamento (`feat/bateria-parametros`) e as branches integradas que
-  ainda podem ser apagadas.
+  OK com Python 3.12 e 3.14 e as três versões com o mesmo resultado. Bateria do `medir.py` em
+  1000² rodada no mesmo notebook (`resultados/linux-i5/`) e colocada no capítulo de experimentos
+  do Overleaf para comparar com o PC do grupo. Registradas as branches integradas que ainda
+  podem ser apagadas.
