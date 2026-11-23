@@ -151,17 +151,38 @@ class TestResumo(unittest.TestCase):
         self.assertAlmostEqual(resumo["paralela_processos"]["eficiencia"], 1.0)
         self.assertAlmostEqual(resumo["sequencial"]["speedup"], 1.0)
 
-    def test_worker_unico_nao_deveria_ter_speedup_absurdo(self):
-        """
-        Invariante contra o outlier que já apareceu: 1 worker no mesmo núcleo tem
-        de ficar perto de 1, não 2.
-        """
+    def test_um_worker_perto_de_1_passa_na_conferencia(self):
+        """1 worker com 5% de diferença da sequencial é ruído normal: nada a avisar."""
         linhas = [
             linha("sequencial", 0.05, 2, 100, 1, 1.0),
             linha("paralela_processos", 0.05, 2, 100, 1, 1.05),
+            linha("distribuida_local", 0.05, 2, 100, 1, 0.96),
         ]
-        resumo = {r["versao"]: r for r in bateria.resumir_cenario(linhas)}
-        self.assertLess(resumo["paralela_processos"]["speedup"], 1.2)
+        self.assertEqual(bateria.conferir_um_worker(bateria.resumir_cenario(linhas)), [])
+
+    def test_um_worker_com_speedup_absurdo_e_apontado(self):
+        """
+        Invariante contra o outlier que já apareceu: 1 worker não tem paralelismo,
+        então um speedup de 1,30 (ou 0,70) tem de ser apontado para investigar.
+        """
+        linhas = [
+            linha("sequencial", 0.05, 2, 100, 1, 1.30),
+            linha("paralela_processos", 0.05, 2, 100, 1, 1.0),   # speedup 1,30
+            linha("distribuida_bits", 0.05, 2, 100, 1, 1.30 / 0.7),  # speedup 0,70
+            linha("paralela_processos", 0.05, 2, 100, 2, 0.5),   # 2 workers: não conferido
+        ]
+        fora = dict(bateria.conferir_um_worker(bateria.resumir_cenario(linhas)))
+        self.assertEqual(set(fora), {"paralela_processos", "distribuida_bits"})
+        self.assertAlmostEqual(fora["paralela_processos"], 1.30)
+        self.assertAlmostEqual(fora["distribuida_bits"], 0.70)
+
+    def test_threads_com_1_worker_nao_sao_conferidas(self):
+        """As threads ficam abaixo de 1 pelo GIL; isso é o resultado, não um erro."""
+        linhas = [
+            linha("sequencial", 0.05, 2, 100, 1, 1.0),
+            linha("paralela_threads", 0.05, 2, 100, 1, 1.4),
+        ]
+        self.assertEqual(bateria.conferir_um_worker(bateria.resumir_cenario(linhas)), [])
 
     def test_sem_referencia_sequencial_o_speedup_e_none(self):
         linhas = [linha("paralela_processos", 0.05, 2, 100, 2, 0.5)]
@@ -192,6 +213,27 @@ class TestRelatorio(unittest.TestCase):
         linhas = [linha("sequencial", 0.05, 2, 100, 1, 1.0)]
         texto, _ = bateria.gerar_relatorio(linhas, cenarios, ("sequencial",), repeticoes=1)
         self.assertIn("indicativos", texto)
+
+    def test_relatorio_aponta_um_worker_fora_da_faixa(self):
+        cenarios = [bateria.Cenario(0.05, 2, 100)]
+        linhas = [
+            linha("sequencial", 0.05, 2, 100, 1, 1.3),
+            linha("paralela_processos", 0.05, 2, 100, 1, 1.0),
+        ]
+        texto, divergencias = bateria.gerar_relatorio(linhas, cenarios, ("sequencial",),
+                                                      repeticoes=5)
+        self.assertEqual(divergencias, 0)
+        self.assertIn("Speedup com 1 worker fora", texto)
+        self.assertIn("1 configuração(ões) com 1 worker", texto)
+
+    def test_relatorio_avisa_abaixo_de_5_repeticoes(self):
+        """O CONTRIBUTING pede pelo menos 5 repetições para números de relatório."""
+        cenarios = [bateria.Cenario(0.05, 2, 100)]
+        linhas = [linha("sequencial", 0.05, 2, 100, 1, 1.0)]
+        texto_3, _ = bateria.gerar_relatorio(linhas, cenarios, ("sequencial",), repeticoes=3)
+        texto_5, _ = bateria.gerar_relatorio(linhas, cenarios, ("sequencial",), repeticoes=5)
+        self.assertIn("indicativos", texto_3)
+        self.assertNotIn("indicativos", texto_5)
 
     def test_relatorio_denuncia_divergencia(self):
         cenarios = [bateria.Cenario(0.05, 2, 100)]

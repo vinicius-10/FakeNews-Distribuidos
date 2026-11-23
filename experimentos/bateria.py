@@ -18,8 +18,9 @@ e cada célula roda aquecimento + N repetições. O que sai:
   (`medir.CAMPOS`), então `analisar.carregar` e as métricas continuam valendo;
 - `resumo.md` — tabela por cenário com mediana, desvio, speedup e eficiência,
   mais o veredito de equivalência de cada célula;
-- `cenarios.json` — os mesmos cenários prontos para o setup de três máquinas
-  (`distribuido/rede/`), que roda exatamente as mesmas configurações na rede real.
+- `cenarios.json` (com `--exportar-cenarios`) — a lista dos mesmos cenários, para
+  repetir as mesmas configurações à mão no teste entre três máquinas. Nenhum script
+  de `distribuido/rede/` lê esse arquivo: ele é um registro do que rodar.
 
 Por que não dá para usar `analisar.agrupar` direto no CSV inteiro
 -----------------------------------------------------------------
@@ -46,12 +47,12 @@ Uso
     # a bateria completa do enunciado: 4 porcentagens × 3 limiares
     python -m experimentos.bateria \\
         --percentuais 0.01 0.05 0.10 0.20 --limiares 1 2 3 \\
-        --tamanhos 500 1000 --geracoes 20 --workers 1 2 4 --repeticoes 3
+        --tamanhos 500 1000 --geracoes 20 --workers 1 2 4 --repeticoes 5
 
     # só listar o que rodaria (não executa nada)
     python -m experimentos.bateria --simular
 
-    # exportar os cenários para rodar nas 3 máquinas
+    # exportar a lista de cenários para repetir à mão nas 3 máquinas
     python -m experimentos.bateria --rapida --exportar-cenarios cenarios.json
 """
 
@@ -73,6 +74,9 @@ VERSOES_PADRAO = ("sequencial", "paralela_processos", "paralela_threads",
                   "distribuida_local", "distribuida_bits")
 
 PASTA_PADRAO = Path(__file__).resolve().parent / "resultados" / "bateria"
+
+# Mínimo de repetições para números de relatório (regra do CONTRIBUTING).
+REPETICOES_MINIMAS = 5
 
 
 @dataclass(frozen=True)
@@ -226,6 +230,34 @@ def resumir_cenario(linhas):
     return saida
 
 
+# Com 1 trabalhador, a paralela (processos) e a distribuída fazem o mesmo trabalho
+# da sequencial, só que num processo novo; o speedup tem de ficar perto de 1.
+# Fora desta faixa, a medição tem algum efeito que não é paralelismo (outlier,
+# estado do processo principal, frequência da CPU) e o número não deve ir para o
+# relatório sem investigar. As threads ficam de fora: o GIL e a troca de contexto
+# já as deixam abaixo de 1 de propósito (é o que o experimento delas mostra).
+FAIXA_UM_WORKER = (0.90, 1.10)
+VERSOES_CONFERIDAS_UM_WORKER = ("paralela_processos", "distribuida_local",
+                                "distribuida_bits")
+
+
+def conferir_um_worker(resumo):
+    """
+    Devolve as linhas do resumo com 1 trabalhador cujo speedup sai da faixa esperada.
+
+    `resumo` é a saída de `resumir_cenario`. Cada item devolvido é
+    (versão, speedup), para o relatório listar o que precisa ser investigado.
+    """
+    minimo, maximo = FAIXA_UM_WORKER
+    fora = []
+    for item in resumo:
+        if (item["workers"] == 1 and item["versao"] in VERSOES_CONFERIDAS_UM_WORKER
+                and item["speedup"] is not None
+                and not minimo <= item["speedup"] <= maximo):
+            fora.append((item["versao"], item["speedup"]))
+    return fora
+
+
 def _num(valor, casas=2):
     """Formata número tolerando None (célula sem referência de speedup)."""
     if valor is None:
@@ -245,16 +277,17 @@ def gerar_relatorio(linhas, cenarios, versoes, repeticoes=None):
     partes.append("Mediana do tempo do laço por configuração. Speedup contra a "
                   "`sequencial` do mesmo cenário.")
     partes.append("")
-    # Com uma repetição só, um outlier de agendamento do sistema infla o speedup
-    # de forma absurda (já vi 2,15 com um único worker). O número vira indicativo,
-    # não resultado — e quem lê a tabela precisa saber disso.
-    if repeticoes is not None and repeticoes < 3:
-        partes.append(f"> ⚠️ **{repeticoes} repetição(ões):** os tempos são "
-                      "indicativos. Use `--repeticoes 3` ou mais e a mediana "
-                      "para números de relatório.")
+    # Com poucas repetições, um outlier de agendamento do sistema infla o speedup
+    # (já apareceu 2,15 com um único worker). O CONTRIBUTING pede pelo menos 5
+    # repetições para números de relatório; abaixo disso, quem lê precisa saber.
+    if repeticoes is not None and repeticoes < REPETICOES_MINIMAS:
+        partes.append(f"> ⚠️ **{repeticoes} repetição(ões):** abaixo das "
+                      f"{REPETICOES_MINIMAS} pedidas pelo CONTRIBUTING; os tempos são "
+                      "indicativos.")
         partes.append("")
 
     total_divergencias = 0
+    total_fora_da_faixa = 0
     for cenario in cenarios:
         fatia = fatias[cenario]
         if not fatia:
@@ -270,7 +303,8 @@ def gerar_relatorio(linhas, cenarios, versoes, repeticoes=None):
         partes.append("")
         partes.append("| versão | workers | mediana (s) | desvio (s) | speedup | eficiência | gerações |")
         partes.append("|---|---:|---:|---:|---:|---:|---:|")
-        for item in resumir_cenario(fatia):
+        resumo = resumir_cenario(fatia)
+        for item in resumo:
             partes.append(
                 f"| `{item['versao']}` | {item['workers']} | "
                 f"{_num(item['mediana'], 4)} | {_num(item['desvio'], 4)} | "
@@ -284,17 +318,32 @@ def gerar_relatorio(linhas, cenarios, versoes, repeticoes=None):
             for versao, tamanho, workers, achado, esperado in divergencias:
                 partes.append(f"- `{versao}` ({tamanho}×{tamanho}, workers={workers}): "
                               f"hash {achado} ≠ esperado {esperado}")
+        fora = conferir_um_worker(resumo)
+        total_fora_da_faixa += len(fora)
+        if fora:
+            minimo, maximo = FAIXA_UM_WORKER
+            lista = ", ".join(f"`{versao}` {_num(s)}" for versao, s in fora)
+            partes.append("")
+            partes.append(f"**Speedup com 1 worker fora de {_num(minimo)}–{_num(maximo)}:** "
+                          f"⚠️ {lista}. Com 1 worker não há paralelismo; investigar "
+                          "antes de usar o speedup deste cenário.")
         partes.append("")
 
     partes.append("## Veredito geral")
     partes.append("")
     if total_divergencias == 0:
-        partes.append("Todas as células fecharam com a mesma grade da sequencial — "
-                      "bateria válida para o relatório.")
+        partes.append("Todas as células fecharam com a mesma grade da sequencial "
+                      "(resultado correto).")
     else:
         partes.append(f"⚠️ **{total_divergencias} divergência(s) de hash.** "
                       "Investigar antes de usar os números.")
     partes.append("")
+    if total_fora_da_faixa:
+        partes.append(f"⚠️ **{total_fora_da_faixa} configuração(ões) com 1 worker** "
+                      "tiveram speedup fora da faixa esperada: os tempos estão corretos "
+                      "como medição, mas o speedup desses cenários não deve ir para o "
+                      "relatório sem explicar a causa.")
+        partes.append("")
     partes.append("> `tempo_laco` é a métrica comparável entre versões. "
                   "O `tempo_total` da distribuída começa depois que os workers "
                   "conectam, então não serve para comparar com a paralela.")
@@ -304,11 +353,12 @@ def gerar_relatorio(linhas, cenarios, versoes, repeticoes=None):
 
 def exportar_cenarios(cenarios, versoes, workers, geracoes, semente, caminho):
     """
-    Grava os cenários em JSON para o setup de três máquinas consumir.
+    Grava os cenários em JSON, para repetir as mesmas configurações nas 3 máquinas.
 
     Só vai o que a rede precisa reproduzir: parâmetros da simulação e a lista de
-    configurações medidas. O setup de 3 máquinas roda o **mesmo** cenário com o
-    coordenador e os workers reais, e a comparação local × rede fica honesta.
+    configurações medidas. Nenhum script lê esse arquivo hoje: quem roda o teste
+    entre máquinas usa os valores dele nos comandos do coordenador e dos workers,
+    e assim a comparação local × rede usa o mesmo cenário.
     """
     dados = {
         "gerado_em": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -349,13 +399,15 @@ def main(argv=None):
                         help="números de trabalhadores das versões paralelas")
     parser.add_argument("--geracoes", type=int, default=20)
     parser.add_argument("--semente", type=int, default=42)
-    parser.add_argument("--repeticoes", type=int, default=3)
+    parser.add_argument("--repeticoes", type=int, default=REPETICOES_MINIMAS,
+                        help=f"repetições medidas (padrão: {REPETICOES_MINIMAS}, "
+                             "o mínimo do CONTRIBUTING)")
     parser.add_argument("--aquecimento", type=int, default=1)
     parser.add_argument("--timeout", type=float, default=600.0)
     parser.add_argument("--saida", default=str(PASTA_PADRAO),
                         help="pasta de saída (CSV, resumo e ambiente)")
     parser.add_argument("--exportar-cenarios", metavar="ARQ.json",
-                        help="grava os cenários em JSON para o setup de 3 máquinas")
+                        help="grava a lista de cenários em JSON (para repetir nas 3 máquinas)")
     parser.add_argument("--cpu", help="nome do processador para o relatório")
     parser.add_argument("--nucleos-fisicos", type=int,
                         help="núcleos físicos (se o psutil não estiver instalado)")
@@ -395,10 +447,10 @@ def main(argv=None):
     print(f"percentuais: {args.percentuais} | limiares: {args.limiares} | "
           f"tamanhos: {args.tamanhos}")
     print(f"saída: {args.saida}\n")
-    if args.repeticoes < 3:
-        print("⚠️  Menos de 3 repetições: os tempos servem para fumaça, não para o "
-              "relatório.\n   O mesmo worker isolado já apareceu 2x mais rápido que a "
-              "sequencial por\n   causa de um único outlier. Use --repeticoes 3 ou mais.\n")
+    if args.repeticoes < REPETICOES_MINIMAS:
+        print(f"⚠️  Menos de {REPETICOES_MINIMAS} repetições: os tempos servem para "
+              "fumaça, não para o\n   relatório. O mesmo worker isolado já apareceu 2x "
+              "mais rápido que a sequencial\n   por causa de um único outlier.\n")
 
     if args.simular:
         print("Plano (--simular, nada foi executado):")
