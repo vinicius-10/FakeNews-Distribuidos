@@ -107,13 +107,18 @@ A grade inicial é sorteada com semente fixa e as regras são determinísticas, 
 │   ├── protocolo.py                      # Mensagens com tamanho no cabeçalho (TCP)
 │   ├── coordenador.py                    # Distribui as faixas, soma as contagens, decide a parada
 │   ├── worker.py                         # Calcula uma faixa e troca as bordas com os vizinhos
-│   └── executar_local.py                 # Coordenador + workers nesta máquina (testes e demonstração)
+│   ├── executar_local.py                 # Coordenador + workers nesta máquina (testes e demonstração)
+│   └── rede/                             # Auxiliares opcionais do teste entre 3 máquinas (.ps1/.sh e guia)
 ├── testes/                               # Testes de equivalência com a versão do professor
 ├── experimentos/                         # Medição de desempenho, análise e gráficos
 │   ├── medir.py                          # Baterias de medição (aquecimento + repetições, CSV)
 │   ├── analisar.py                       # Speedup, eficiência, Karp-Flatt, Amdahl, Gustafson
 │   ├── perfis.py                         # Cálculo x comunicação x espera por worker
-│   └── resultados/                       # CSVs, tabelas.md, perfis.md e gráficos
+│   ├── modelo.py                         # Efeito das melhorias do modelo (resistência e bots)
+│   ├── custo_sequencial.py               # Custo do código do professor (perfil, memória)
+│   ├── bateria.py                        # Bateria que varia percentual e limiar
+│   └── resultados/                       # CSVs, tabelas, gráficos; linux-i5/ e bateria/ à parte
+├── docs/                                 # Roadmap (andamento.md) e busca de referências
 ├── relatorio/                            # Cópia do relatório (LaTeX) mantida no Overleaf
 ├── .github/pull_request_template.md      # Modelo de descrição dos pull requests
 ├── CONTRIBUTING.md                       # Guia de contribuição do grupo
@@ -180,7 +185,7 @@ As melhorias do modelo (resistência e bots) ficam desligadas por padrão, para 
 ```bash
 python -m unittest discover -s testes -v
 ```
-56 testes, só com a biblioteca padrão (rodam iguais no Windows e no Linux):
+76 testes, só com a biblioteca padrão (rodam iguais no Windows e no Linux):
 
 | Arquivo | O que confere |
 |---|---|
@@ -191,6 +196,7 @@ python -m unittest discover -s testes -v
 | `test_melhorias_saida.py` | estatísticas e animação não mudam a grade, batem com o professor e gravam os arquivos certos |
 | `test_saida.py` | texto impresso igual ao do professor; paralela e distribuída imprimem as mesmas gerações e o mesmo resultado |
 | `test_metricas.py` | fórmulas da análise: *speedup*, eficiência, Karp–Flatt, Amdahl, Gustafson, mediana e conferência dos hashes |
+| `test_bateria.py` | bateria de percentual × limiar: plano de cenários, análise separada por cenário, conferência do *speedup* com 1 *worker*, avisos do resumo e JSON dos cenários |
 
 ### Experimentos
 ```bash
