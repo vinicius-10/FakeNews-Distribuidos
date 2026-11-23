@@ -32,6 +32,12 @@ class ParametrosSimulacao:
             raise ValueError("a grade precisa ter pelo menos 1 linha e 1 coluna")
         if self.geracoes < 1:
             raise ValueError("é preciso pelo menos 1 geração")
+        # Um limiar negativo faz todo ignorante virar espalhador na primeira
+        # geração; acima de 8 nenhum ignorante tem vizinhos suficientes (a
+        # vizinhança de Moore tem no máximo 8 células). O teto é 9, o mesmo da
+        # resistência individual, e equivale a "ninguém se convence".
+        if not 0 <= self.limiar <= 9:
+            raise ValueError(f"o limiar de convencimento vai de 0 a 9 (recebido {self.limiar})")
         if not 0 <= self.percentual_espalhadores <= 1 or not 0 <= self.fracao_bots <= 1:
             raise ValueError("percentuais vão de 0 a 1 (ex.: 0.05 = 5%)")
         if self.resistencia is not None:
