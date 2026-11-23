@@ -16,7 +16,7 @@ arquivo** (tabela, checklist e histórico) no mesmo PR.
 | Testes | ✅ 56 testes passando (Windows e Linux): equivalência, protocolo, robustez, melhorias 2 e 3, saída, métricas | [`testes/`](../testes/) |
 | 6 melhorias | ✅ implementadas · ✅ medidas · ❌ não escritas no relatório | [seção 5](#5-melhorias-escolhidas) |
 | Experimentos de desempenho | ✅ medidos numa máquina (localhost) · 🔄 3 máquinas: conexão ok, falta medir | [`experimentos/`](../experimentos/) |
-| Relatório (Overleaf) | 🔄 fundamentação e seção 3 (sequencial) escritas; o resto tem `\todo` | [`relatorio/`](../relatorio/) (cópia) |
+| Relatório (Overleaf) | 🔄 fundamentação, seção 3 (sequencial) e seção 4 (paralela) escritas; o resto tem `\todo` | [`relatorio/`](../relatorio/) (cópia) |
 | Slides (PDF) | ❌ não começados | — |
 | Vídeo 10–15 min | ❌ não gravado | — |
 | ZIP final | ❌ | — |
@@ -58,6 +58,10 @@ Decisões principais:
   imprime e decide se continua; B, os *workers* esperam a decisão; depois todos trocam os buffers.
 - Sem condição de corrida: cada *worker* escreve só as suas linhas e a sua posição de `contagens`.
 - Timeout de 600 s nas barreiras (uma barreira presa vira erro em vez de travar).
+- **Janela local**: cada *worker* calcula num `bytearray` com a sua faixa + 1 linha vizinha de cada
+  lado (recarrega só essas 2 linhas a cada geração) e devolve as suas linhas ao bloco compartilhado.
+  Com 1 *worker* (i7-13650HX), o *speedup* sobre a sequencial passou de 0,82 (1000²) e 0,78 (2000²)
+  para 0,95 nas duas grades.
 
 ## 3. Versão distribuída
 
@@ -143,7 +147,10 @@ onde cada um marca as suas tarefas.
    - [x] gravar a **configuração da máquina** em `resultados/ambiente.csv` (i9-12900F, 16 núcleos
      físicos / 24 lógicos, 31,8 GB, Windows, Python 3.11.7, desktop na tomada);
    - [x] calcular **speedup** e **eficiência** sobre `tempo_laco` e `tempo_total`;
-   - [x] fração serial de **Karp–Flatt**, limite de Amdahl e Gustafson.
+   - [x] fração serial de **Karp–Flatt**, limite de Amdahl e Gustafson;
+   - [ ] **refazer a paralela em 2000²**: a linha de `tabelas.md` (0,85 com 1 *worker*) bate com a
+     versão anterior à janela local, então os *speedups* da paralela nessa grade estão
+     subestimados (a de 1000² já foi medida com a versão atual).
 3. [x] **Medir as melhorias de desempenho** (`resultados/tabelas.md`, `perfis.md`):
    - grade compacta × original (`deepcopy`): **3,3× a 3,5×** mais rápida com 1 trabalhador;
    - `--bits`: *halo* de ~1.921 para ~281 bytes por *worker* por geração (16 *workers*, 1000²),
@@ -167,10 +174,12 @@ onde cada um marca as suas tarefas.
      eficiência caindo acima de 8 *workers* (núcleos P/E) e speedup superlinear com 2 *workers*
      (cache);
    - [ ] texto das análises no relatório (item 7).
-7. [ ] **Relatório no Overleaf**. `\todo` pendentes (cópia de 23 nov., commit `139cd2b`):
-   introdução 1 · paralela 4 · distribuída 5 · melhorias 5 (faltam as 6 subseções) ·
-   experimentos 13 · conclusão 6 · apêndice de execução 2. Fundamentação e seção 3 (sequencial:
-   funcionamento com fluxograma e exemplo passo a passo, e análise de custo) estão completas. No capítulo de experimentos (ou no
+7. [ ] **Relatório no Overleaf**. `\todo` pendentes (cópia de 23 nov., commit `a04a424`):
+   introdução 1 · distribuída 5 · melhorias 5 (faltam as 6 subseções) · experimentos 13 ·
+   conclusão 6 · apêndice de execução 2. Completas: fundamentação, seção 3 (sequencial:
+   funcionamento com fluxograma e exemplo passo a passo, e análise de custo) e seção 4
+   (paralela: estratégia, fluxograma do principal e dos *workers*, divisão em faixas com figura
+   da janela local e das linhas vizinhas, memória, sincronização e verificação). No capítulo de experimentos (ou no
    apêndice), um parágrafo sobre a verificação: os 56 testes, o que cada grupo cobre e a
    conferência por SHA-256 nas baterias; no da distribuída, o descarte de conexões que não são
    *workers*, os *timeouts* e o que o `tempo_total` mede. No capítulo de experimentos: preencher
@@ -254,3 +263,7 @@ onde cada um marca as suas tarefas.
 - **23 nov. 2026**: seção 3 do relatório escrita (3.3 funcionamento da sequencial, com fluxograma e
   exemplo 5×5 passo a passo; 3.4 análise de custo). Novo `experimentos/custo_sequencial.py` mede o
   custo do código do professor (perfil por etapa, custo por estado, limiar × percentual e memória).
+- **23 nov. 2026**: seção 4 do relatório (versão paralela) escrita, com fluxograma do principal e
+  dos *workers* e figura da divisão em faixas. A janela local foi medida de novo no i7-13650HX
+  (versão antiga × atual, 1 *worker*); a medição mostrou que a paralela em 2000² de `tabelas.md`
+  é da versão anterior à janela e precisa ser refeita.
