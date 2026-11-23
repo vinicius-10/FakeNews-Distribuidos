@@ -2,6 +2,8 @@
 
 Mediana do tempo do laço por configuração. Speedup contra a `sequencial` do mesmo cenário.
 
+> ⚠️ **3 repetição(ões):** abaixo das 5 pedidas pelo CONTRIBUTING; os tempos são indicativos.
+
 ## p0.01_l1_300x300
 
 - percentual de espalhadores: **1.00%**
@@ -50,6 +52,8 @@ Mediana do tempo do laço por configuração. Speedup contra a `sequencial` do m
 
 **Equivalência:** todas as versões produziram a mesma grade final. ✅
 
+**Speedup com 1 worker fora de 0.90–1.10:** ⚠️ `distribuida_bits` 1.28, `distribuida_local` 1.28, `paralela_processos` 1.24. Com 1 worker não há paralelismo; investigar antes de usar o speedup deste cenário.
+
 ## p0.01_l2_300x300
 
 - percentual de espalhadores: **1.00%**
@@ -73,6 +77,8 @@ Mediana do tempo do laço por configuração. Speedup contra a `sequencial` do m
 | `sequencial` | 1 | 0.6073 | 0.0462 | 1.00 | 1.00 | 20 |
 
 **Equivalência:** todas as versões produziram a mesma grade final. ✅
+
+**Speedup com 1 worker fora de 0.90–1.10:** ⚠️ `distribuida_local` 1.11, `paralela_processos` 1.14. Com 1 worker não há paralelismo; investigar antes de usar o speedup deste cenário.
 
 ## p0.01_l2_600x600
 
@@ -98,6 +104,8 @@ Mediana do tempo do laço por configuração. Speedup contra a `sequencial` do m
 
 **Equivalência:** todas as versões produziram a mesma grade final. ✅
 
+**Speedup com 1 worker fora de 0.90–1.10:** ⚠️ `distribuida_bits` 1.32, `distribuida_local` 1.31, `paralela_processos` 1.31. Com 1 worker não há paralelismo; investigar antes de usar o speedup deste cenário.
+
 ## p0.01_l3_300x300
 
 - percentual de espalhadores: **1.00%**
@@ -122,6 +130,8 @@ Mediana do tempo do laço por configuração. Speedup contra a `sequencial` do m
 
 **Equivalência:** todas as versões produziram a mesma grade final. ✅
 
+**Speedup com 1 worker fora de 0.90–1.10:** ⚠️ `distribuida_bits` 1.20, `distribuida_local` 1.22, `paralela_processos` 1.19. Com 1 worker não há paralelismo; investigar antes de usar o speedup deste cenário.
+
 ## p0.01_l3_600x600
 
 - percentual de espalhadores: **1.00%**
@@ -145,6 +155,8 @@ Mediana do tempo do laço por configuração. Speedup contra a `sequencial` do m
 | `sequencial` | 1 | 0.2711 | 0.0247 | 1.00 | 1.00 | 2 |
 
 **Equivalência:** todas as versões produziram a mesma grade final. ✅
+
+**Speedup com 1 worker fora de 0.90–1.10:** ⚠️ `distribuida_bits` 1.23, `distribuida_local` 1.27, `paralela_processos` 1.26. Com 1 worker não há paralelismo; investigar antes de usar o speedup deste cenário.
 
 ## p0.05_l1_300x300
 
@@ -194,6 +206,8 @@ Mediana do tempo do laço por configuração. Speedup contra a `sequencial` do m
 
 **Equivalência:** todas as versões produziram a mesma grade final. ✅
 
+**Speedup com 1 worker fora de 0.90–1.10:** ⚠️ `distribuida_bits` 1.32, `distribuida_local` 1.30, `paralela_processos` 1.31. Com 1 worker não há paralelismo; investigar antes de usar o speedup deste cenário.
+
 ## p0.05_l2_300x300
 
 - percentual de espalhadores: **5.00%**
@@ -218,6 +232,8 @@ Mediana do tempo do laço por configuração. Speedup contra a `sequencial` do m
 
 **Equivalência:** todas as versões produziram a mesma grade final. ✅
 
+**Speedup com 1 worker fora de 0.90–1.10:** ⚠️ `distribuida_bits` 1.29, `distribuida_local` 1.28, `paralela_processos` 1.25. Com 1 worker não há paralelismo; investigar antes de usar o speedup deste cenário.
+
 ## p0.05_l2_600x600
 
 - percentual de espalhadores: **5.00%**
@@ -241,6 +257,8 @@ Mediana do tempo do laço por configuração. Speedup contra a `sequencial` do m
 | `sequencial` | 1 | 1.6747 | 0.0388 | 1.00 | 1.00 | 20 |
 
 **Equivalência:** todas as versões produziram a mesma grade final. ✅
+
+**Speedup com 1 worker fora de 0.90–1.10:** ⚠️ `distribuida_bits` 1.11, `distribuida_local` 1.10, `paralela_processos` 1.13. Com 1 worker não há paralelismo; investigar antes de usar o speedup deste cenário.
 
 ## p0.05_l3_300x300
 
@@ -290,6 +308,8 @@ Mediana do tempo do laço por configuração. Speedup contra a `sequencial` do m
 
 **Equivalência:** todas as versões produziram a mesma grade final. ✅
 
+**Speedup com 1 worker fora de 0.90–1.10:** ⚠️ `distribuida_bits` 1.32, `distribuida_local` 1.32, `paralela_processos` 1.32. Com 1 worker não há paralelismo; investigar antes de usar o speedup deste cenário.
+
 ## p0.1_l1_300x300
 
 - percentual de espalhadores: **10.00%**
@@ -313,6 +333,8 @@ Mediana do tempo do laço por configuração. Speedup contra a `sequencial` do m
 | `sequencial` | 1 | 0.0838 | 0.0121 | 1.00 | 1.00 | 7 |
 
 **Equivalência:** todas as versões produziram a mesma grade final. ✅
+
+**Speedup com 1 worker fora de 0.90–1.10:** ⚠️ `distribuida_bits` 1.23, `distribuida_local` 1.21, `paralela_processos` 1.23. Com 1 worker não há paralelismo; investigar antes de usar o speedup deste cenário.
 
 ## p0.1_l1_600x600
 
@@ -338,6 +360,8 @@ Mediana do tempo do laço por configuração. Speedup contra a `sequencial` do m
 
 **Equivalência:** todas as versões produziram a mesma grade final. ✅
 
+**Speedup com 1 worker fora de 0.90–1.10:** ⚠️ `distribuida_bits` 1.20, `distribuida_local` 1.22, `paralela_processos` 1.20. Com 1 worker não há paralelismo; investigar antes de usar o speedup deste cenário.
+
 ## p0.1_l2_300x300
 
 - percentual de espalhadores: **10.00%**
@@ -361,6 +385,8 @@ Mediana do tempo do laço por configuração. Speedup contra a `sequencial` do m
 | `sequencial` | 1 | 0.2906 | 0.0302 | 1.00 | 1.00 | 20 |
 
 **Equivalência:** todas as versões produziram a mesma grade final. ✅
+
+**Speedup com 1 worker fora de 0.90–1.10:** ⚠️ `distribuida_bits` 1.30, `distribuida_local` 1.31, `paralela_processos` 1.32. Com 1 worker não há paralelismo; investigar antes de usar o speedup deste cenário.
 
 ## p0.1_l2_600x600
 
@@ -386,6 +412,8 @@ Mediana do tempo do laço por configuração. Speedup contra a `sequencial` do m
 
 **Equivalência:** todas as versões produziram a mesma grade final. ✅
 
+**Speedup com 1 worker fora de 0.90–1.10:** ⚠️ `distribuida_bits` 1.33, `distribuida_local` 1.35, `paralela_processos` 1.35. Com 1 worker não há paralelismo; investigar antes de usar o speedup deste cenário.
+
 ## p0.1_l3_300x300
 
 - percentual de espalhadores: **10.00%**
@@ -409,6 +437,8 @@ Mediana do tempo do laço por configuração. Speedup contra a `sequencial` do m
 | `sequencial` | 1 | 0.1162 | 0.0031 | 1.00 | 1.00 | 4 |
 
 **Equivalência:** todas as versões produziram a mesma grade final. ✅
+
+**Speedup com 1 worker fora de 0.90–1.10:** ⚠️ `distribuida_bits` 1.14, `paralela_processos` 1.20. Com 1 worker não há paralelismo; investigar antes de usar o speedup deste cenário.
 
 ## p0.1_l3_600x600
 
@@ -434,8 +464,12 @@ Mediana do tempo do laço por configuração. Speedup contra a `sequencial` do m
 
 **Equivalência:** todas as versões produziram a mesma grade final. ✅
 
+**Speedup com 1 worker fora de 0.90–1.10:** ⚠️ `distribuida_bits` 1.29, `distribuida_local` 1.27, `paralela_processos` 1.30. Com 1 worker não há paralelismo; investigar antes de usar o speedup deste cenário.
+
 ## Veredito geral
 
-Todas as células fecharam com a mesma grade da sequencial — bateria válida para o relatório.
+Todas as células fecharam com a mesma grade da sequencial (resultado correto).
+
+⚠️ **43 configuração(ões) com 1 worker** tiveram speedup fora da faixa esperada: os tempos estão corretos como medição, mas o speedup desses cenários não deve ir para o relatório sem explicar a causa.
 
 > `tempo_laco` é a métrica comparável entre versões. O `tempo_total` da distribuída começa depois que os workers conectam, então não serve para comparar com a paralela.
