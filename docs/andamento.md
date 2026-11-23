@@ -12,10 +12,10 @@ arquivo** (tabela, checklist e histórico) no mesmo PR.
 | Sequencial original (professor) | ✅ referência, não alterar | [`sequencial/fakenews_sequencial_original.py`](../sequencial/fakenews_sequencial_original.py) |
 | Sequencial refatorada | ✅ feita e testada | [`sequencial/fakenews_sequencial.py`](../sequencial/fakenews_sequencial.py) + [`comum/`](../comum/) |
 | Paralela (processos e threads) | ✅ feita e testada | [`paralelo/fakenews_paralelo.py`](../paralelo/fakenews_paralelo.py) |
-| Distribuída (sockets TCP) | ✅ feita e testada (localhost e interface de rede real de 1 PC) | [`distribuido/`](../distribuido/) |
+| Distribuída (sockets TCP) | ✅ feita e testada (localhost, interface de rede real e 3 máquinas) | [`distribuido/`](../distribuido/) |
 | Testes de equivalência | ✅ 27 testes passando (Windows e Linux) | [`testes/`](../testes/) |
 | 6 melhorias | ✅ implementadas · ✅ medidas · ❌ não escritas no relatório | [seção 5](#5-melhorias-escolhidas) |
-| Experimentos de desempenho | ✅ medidos numa máquina (localhost) · 🔄 teste entre 3 máquinas | [`experimentos/`](../experimentos/) |
+| Experimentos de desempenho | ✅ medidos numa máquina (localhost) · 🔄 3 máquinas: conexão ok, falta medir | [`experimentos/`](../experimentos/) |
 | Relatório (Overleaf) | 🔄 fundamentação avançou; o resto tem `\todo` | [`relatorio/`](../relatorio/) (cópia) |
 | Slides (PDF) | ❌ não começados | — |
 | Vídeo 10–15 min | ❌ não gravado | — |
@@ -109,13 +109,13 @@ Esta lista acompanha o [roadmap do grupo](https://claude.ai/artifact/X6U3gNTZ2Fd
 onde cada um marca as suas tarefas.
 
 0. [ ] **Confirmar o prazo de entrega e o número do grupo** (o número vai no nome do vídeo).
-1. [ ] **Código na `main`**:
+1. [x] **Código na `main`**:
    - [x] PR [#3](https://github.com/vinicius-10/FakeNews-Distribuidos/pull/3) (três versões, 6
      melhorias e testes): aprovado e integrado em 23 nov.;
    - [x] PR [#4](https://github.com/vinicius-10/FakeNews-Distribuidos/pull/4) (experimentos e
      robustez): integrado na `feat/implementacoes-codigo` em 23 nov.;
-   - [ ] PR [#5](https://github.com/vinicius-10/FakeNews-Distribuidos/pull/5) de
-     `feat/implementacoes-codigo` para a `main` (leva o PR #4): falta 1 aprovação e o merge.
+   - [x] PR [#5](https://github.com/vinicius-10/FakeNews-Distribuidos/pull/5) de
+     `feat/implementacoes-codigo` para a `main` (leva o PR #4): aprovado e integrado em 23 nov.
 2. [x] **Script de experimentos** em Python ([`experimentos/`](../experimentos/README.md)):
    `medir.py` (baterias), `analisar.py` (métricas, tabelas e gráficos), `perfis.py` (tempo por
    *worker*) e `modelo.py` (melhorias do modelo).
@@ -179,9 +179,19 @@ onde cada um marca as suas tarefas.
     - [x] **interface de rede real**: distribuída com `--host 0.0.0.0` e *workers* conectando
       pelo IP da máquina (2 e 3 *workers*), mesmo resultado da sequencial
       ([`validacao.md`](../experimentos/resultados/rede/validacao.md));
-    - [ ] a distribuída **entre 3 máquinas reais** (roteiro em
+    - [x] a distribuída **entre 3 máquinas reais** funcionando (roteiro em
       [`distribuido/rede/LEIA-ME-3-maquinas.md`](../distribuido/rede/LEIA-ME-3-maquinas.md)):
-      falta liberar o *firewall*, preparar os notebooks, rodar e medir;
+      rede privada e *firewall* liberados nas 3; 200×200, limiar 2, 3 *workers* (um por máquina)
+      deu o mesmo resultado da sequencial (17.027 ignorantes e 22.973 inativos na geração 44).
+      Tempo do laço 1,07 s, contra 0,36 s da sequencial: com grade pequena a rede domina
+      (~24 ms por geração);
+    - [ ] **medir** entre 3 máquinas: 2000×2000 com repetições, 1 *worker* por máquina, com e sem
+      `--bits`, 2 *workers* por máquina, e os mesmos 3 *workers* em `localhost` para comparar
+      (custo da rede real);
+    - [ ] coordenador: o `tempo_total` inclui a espera até os *workers* conectarem (no teste
+      deu 100,9 s, o tempo de abrir os terminais) e precisa começar depois das conexões; uma
+      conexão que não é *worker* (ex.: `Test-NetConnection` na porta 5000) derruba o
+      coordenador com `ConnectionError` em vez de ser descartada;
     - [ ] trocar os scripts `.ps1`/`.sh` de `distribuido/rede/` por Python ou deixar claro que
       são opcionais (o CONTRIBUTING pede scripts de execução em Python, iguais nos dois sistemas).
 12. [ ] **Entrega**:
@@ -207,3 +217,7 @@ onde cada um marca as suas tarefas.
   *workers*, perfil por *worker*, efeito das melhorias e validação da distribuída pela interface
   de rede. Speedup do laço em 2000² com 24 *workers*: 10,9 (paralela) e 12,2 (distribuída em
   `localhost`). PR #5 aberto para levar tudo à `main`.
+- **23 nov. 2026**: PR #5 integrado; o código e os experimentos estão todos na `main`. Distribuída
+  rodada entre 3 máquinas reais na rede local (teste de conexão em 200×200, mesmo resultado da
+  sequencial). Falta medir em 2000×2000 e corrigir no coordenador o `tempo_total` e o descarte de
+  conexões que não são *workers*.
