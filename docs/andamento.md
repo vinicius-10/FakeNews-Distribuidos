@@ -128,14 +128,22 @@ onde cada um marca as suas tarefas.
    - [x] PR [#4](https://github.com/vinicius-10/FakeNews-Distribuidos/pull/4) (experimentos e
      robustez): integrado na `feat/implementacoes-codigo` em 23 nov.;
    - [x] PR [#5](https://github.com/vinicius-10/FakeNews-Distribuidos/pull/5) de
-     `feat/implementacoes-codigo` para a `main` (leva o PR #4): aprovado e integrado em 23 nov.
+     `feat/implementacoes-codigo` para a `main` (leva o PR #4): aprovado e integrado em 23 nov.;
+   - [x] PRs #6 a #9 (roteiro das 3 máquinas, scripts de rede, testes completos e custo da
+     sequencial) integrados em 23 nov.;
+   - [ ] apagar as branches já integradas que ficaram no GitHub (`docs/andamento-3-maquinas`,
+     `docs/guia-contribuicao`, `docs/referencias`, `feat/experimentos-custo-sequencial`,
+     `feat/experimentos-e-robustez`, `feat/implementacoes-codigo`, `fix/scripts-rede-notebooks`,
+     `test/completar-testes`).
 2. [x] **Script de experimentos** em Python ([`experimentos/`](../experimentos/README.md)):
    `medir.py` (baterias), `analisar.py` (métricas, tabelas e gráficos), `perfis.py` (tempo por
    *worker*) e `modelo.py` (melhorias do modelo).
    - [x] variar tamanho da grade (500², 1000², 2000²) e nº de processos/*threads*/*workers*
      (1 a 24), com limiar 2;
    - [ ] variar **gerações** e **% de espalhadores** (o `medir.py` já aceita `--geracoes` e
-     `--percentual`; as baterias usaram só 20 gerações e 5%);
+     `--percentual`; as baterias usaram só 20 gerações e 5%). 🔄 Em andamento na branch
+     `feat/bateria-parametros` (Rafael, ainda sem PR): bateria que varia percentual e limiar nas
+     três versões; gerações ainda não;
    - [x] rodar **os mesmos cenários nas três versões**; o SHA-256 da grade final confirma que
      todas deram o mesmo resultado em todas as execuções;
    - [x] 1 execução de aquecimento descartada + repetições, reportando a mediana (5 ou mais na
@@ -198,6 +206,10 @@ onde cada um marca as suas tarefas.
 11. [ ] Rodar em outros ambientes:
     - [x] **Linux**: testes e as três versões rodados no Ubuntu (WSL, Python 3.12.3), com o mesmo
       resultado do Windows;
+    - [x] **Linux nativo** (Fedora, i5-1240P, `main` em `ec05145`, depois do PR #9): 56 testes OK
+      com Python 3.12.16 e 3.14.10 (~5,5 s); `custo_sequencial --rapido` OK; em 400×400, 30
+      gerações e limiar 2, sequencial, paralela (8 processos e 4 *threads*) e distribuída
+      (4 *workers*, com e sem `--bits`) deram 67.670 / 54 / 92.276;
     - [x] **interface de rede real**: distribuída com `--host 0.0.0.0` e *workers* conectando
       pelo IP da máquina (2 e 3 *workers*), mesmo resultado da sequencial
       ([`validacao.md`](../experimentos/resultados/rede/validacao.md));
@@ -254,3 +266,7 @@ onde cada um marca as suas tarefas.
 - **23 nov. 2026**: seção 3 do relatório escrita (3.3 funcionamento da sequencial, com fluxograma e
   exemplo 5×5 passo a passo; 3.4 análise de custo). Novo `experimentos/custo_sequencial.py` mede o
   custo do código do professor (perfil por etapa, custo por estado, limiar × percentual e memória).
+- **23 nov. 2026**: `main` depois do PR #9 conferida em Linux nativo (Fedora, i5-1240P): 56 testes
+  OK com Python 3.12 e 3.14 e as três versões com o mesmo resultado. Registrados a bateria de
+  percentual e limiar em andamento (`feat/bateria-parametros`) e as branches integradas que
+  ainda podem ser apagadas.
