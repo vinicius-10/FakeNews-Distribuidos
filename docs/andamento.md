@@ -14,9 +14,9 @@ arquivo** (tabela, checklist e histórico) no mesmo PR.
 | Paralela (processos e threads) | ✅ feita e testada | [`paralelo/fakenews_paralelo.py`](../paralelo/fakenews_paralelo.py) |
 | Distribuída (sockets TCP) | ✅ feita e testada (localhost, interface de rede real e 3 máquinas) | [`distribuido/`](../distribuido/) |
 | Testes | ✅ 76 testes passando na `main` (Linux, Python 3.12 e 3.14; o Windows rodou 72, antes da revisão do PR #11): equivalência, protocolo, robustez, melhorias 2 e 3, saída, métricas, bateria | [`testes/`](../testes/) |
-| 6 melhorias | ✅ implementadas · ✅ medidas · ❌ não escritas no relatório | [seção 5](#5-melhorias-escolhidas) |
+| 6 melhorias | ✅ implementadas · ✅ medidas · ✅ escritas no relatório (falta o resultado de `--bits` entre 3 máquinas) | [seção 5](#5-melhorias-escolhidas) |
 | Experimentos de desempenho | ✅ medidos no PC do grupo (Windows) e num notebook (Linux), em localhost · 🔄 3 máquinas: conexão ok, falta medir · 🔄 bateria de percentual × limiar: refazer com 5 repetições | [`experimentos/`](../experimentos/) |
-| Relatório (Overleaf) | 🔄 fundamentação, sequencial e paralela escritas; experimentos com ambiente e comparação entre máquinas; distribuída, melhorias, introdução e conclusão com `\todo` | [`relatorio/`](../relatorio/) (cópia) |
+| Relatório (Overleaf) | 🔄 introdução, fundamentação, sequencial, paralela, distribuída e melhorias escritas; experimentos com ambiente e comparação entre máquinas; resto de experimentos, conclusão e apêndice com `\todo` | [`relatorio/`](../relatorio/) (cópia) |
 | Slides (PDF) | ❌ não começados | — |
 | Vídeo 10–15 min | ❌ não gravado | — |
 | ZIP final | ❌ | — |
@@ -206,24 +206,29 @@ onde cada um marca as suas tarefas.
      distribuída (tabelas e gráficos do PC do grupo); as quatro análises (gargalos,
      sincronização, custo de comunicação, limitações) com os números do item 6; um parágrafo
      sobre a verificação (os 76 testes, o que cada grupo cobre e a conferência por SHA-256);
-   - [ ] distribuída (5 `\todo`): arquitetura, divisão, protocolo, sincronização e verificação,
-     incluindo o descarte de conexões que não são *workers*, os *timeouts* e o que o
-     `tempo_total` mede;
-   - [ ] melhorias (5 `\todo`): as 6 subseções, cada uma com motivação, implementação,
-     referência e resultado;
-   - [ ] introdução (1), conclusão (6, com a tabela de contribuições dos quatro integrantes) e
-     apêndice de execução (2, com o registro do uso de IA).
+   - [x] distribuída: arquitetura (figura), divisão, protocolo (quadro das mensagens e figura de
+     uma geração), sincronização, *timeouts*, descarte de conexões que não são *workers*, o que o
+     `tempo_total` mede e verificação. Resta 1 `\todo`: a medição entre 3 máquinas;
+   - [x] melhorias: as 6 seções (motivação, implementação, fundamentação e resultado), com
+     tabelas da grade compacta, do perfil por fase e do efeito do modelo. Resta 1 `\todo`: o
+     efeito de `--bits` no tempo entre 3 máquinas;
+   - [x] introdução: motivação com referências;
+   - [ ] conclusão (6, com a tabela de contribuições dos quatro integrantes) e apêndice de
+     execução (2, com o registro do uso de IA);
+   - [ ] a fundamentação diz que "o processador utilizado neste trabalho" é o i7-13650HX, mas a
+     bateria principal foi no i9-12900F (máquina A) e a comparação no i5-1240P (máquina B): ajustar
+     o parágrafo dos núcleos P e E para as máquinas da `tab:ambiente`.
    Cada seção é revisada por quem fez aquela parte do código.
-8. [ ] **Referências** (o enunciado exige citar). Faltam no `main.bib` (as entradas existentes
-   ficam como estão):
-   - [ ] artigos das melhorias que estão em [`final.md`](final.md): Jin et al. (2013), Amaral e
-     Arenzon (2018), Shao et al. (2018) e Giordano et al. (2019); e, para a análise, Millán et al.
-     (2015) e Hoefler e Belli (2015), se forem citados;
-   - [ ] melhorias 2 (estatísticas) e 3 (visualização): ainda sem referência;
-   - [ ] bibliotecas: documentação do Python (`multiprocessing`, `shared_memory`, `socket`) e o
-     `matplotlib` (usado só nos gráficos dos experimentos);
-   - [ ] uso de IA: Claude (Anthropic), usado no código, nos experimentos e nos textos, e
-     DeepSeek, usado no PR #11.
+8. [x] **Referências** no `main.bib` (DOIs conferidos no Crossref; as entradas antigas ficaram
+   como estavam):
+   - [x] melhorias: Jin et al. (2013), Amaral e Arenzon (2018), Shao et al. (2018), Giordano et
+     al. (2019) e Dalcin et al. (2011), já citados; melhoria 2 com Hoefler e Belli (2015) e
+     melhoria 3 com Gardner (1970) e Wolfram (1983);
+   - [x] bibliotecas: `PythonSocket` (citada na distribuída), `PythonMultiprocessing`,
+     `PythonSharedMemory` e `Hunter2007` (matplotlib) prontas para citar;
+   - [x] uso de IA: `AnthropicClaudeCode` e `DeepSeek` prontas para citar no apêndice;
+   - [ ] citar `PythonMultiprocessing`/`PythonSharedMemory` na paralela, `Hunter2007` nos
+     gráficos dos experimentos e as duas de IA no apêndice (só aparecem na lista se citadas).
 9. [ ] **Slides** em PDF:
    - [ ] todos os tópicos do enunciado: problema, modelo, sequencial, paralela e distribuída,
      divisão da matriz, tabelas e gráficos, *speedup* e eficiência, dificuldades, melhorias,
@@ -330,3 +335,7 @@ onde cada um marca as suas tarefas.
   com `bateria.py`, `custo_sequencial.py`, `modelo.py`, `distribuido/rede/` e `docs/`). Seção da
   paralela do relatório conferida contra o código. Faltam no `main.bib` as referências das
   melhorias, das bibliotecas e do uso de IA.
+- **23 nov. 2026**: frente da Pessoa 2 no Overleaf: seção da distribuída escrita (com duas figuras
+  e o quadro do protocolo), as 6 melhorias, a motivação da introdução e 13 referências novas no
+  `main.bib`. Compilado sem erros nem citações indefinidas. Ficam 2 `\todo` que dependem da
+  medição entre 3 máquinas.
