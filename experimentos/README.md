@@ -55,6 +55,9 @@ python -m experimentos.bateria --percentuais 0.05 --limiares 2 --tamanhos 2000 \
 # 7) VERIFICAÇÃO DA SEÇÃO 3.4.2: reproduz as Tabelas 1 e 2 do trabalho e compara
 #    com os valores publicados (tempo do código do professor por tamanho de grade
 #    e divisão do tempo de uma geração entre varredura, cópia e contagem).
+#    PADRÃO DO PROJETO: Python 3.11 — é o do artigo e o da maioria dos testes.
+#    Com outra versão o script avisa, porque a divisão entre varredura e cópia
+#    muda (em 3.12 a varredura pesa mais e a cópia menos).
 python -m experimentos.verificar_342
 python -m experimentos.verificar_342 --tabela 2        # só a Tabela 2
 

@@ -63,6 +63,28 @@ PERCENTUAL = 0.05
 LIMIAR = 2
 SEMENTE = 42
 
+# Versão de Python de referência deste projeto: a do artigo (Tabela 1) e a usada
+# na maioria dos testes. Outra versão move o custo entre as etapas — em 3.12 a
+# varredura fica relativamente mais cara e a cópia mais barata —, o que afasta a
+# divisão da Tabela 2 do que o texto publicado descreve.
+VERSAO_PADRAO = "3.11"
+
+
+def aviso_de_versao(versao=None):
+    """
+    Aviso a imprimir quando a medição não roda na versão de referência.
+
+    Devolve None quando a versão é a padrão (3.11.x).
+    """
+    atual = versao or platform.python_version()
+    if atual.split(".")[:2] == VERSAO_PADRAO.split("."):
+        return None
+    return (f"⚠️  Python {atual} — o padrão do projeto é {VERSAO_PADRAO}. "
+            "A Tabela 1 do trabalho foi medida em 3.11.7 e a Tabela 2 em 3.12.10; "
+            "a divisão entre varredura e cópia muda com a versão, então compare "
+            "sabendo qual interpretador foi usado.")
+
+
 
 def _console_seguro():
     """Acentos fora da tabela do terminal não podem derrubar a medição."""
@@ -244,6 +266,10 @@ def main(argv=None):
         print(f"{chave}: {valor}")
     print(f"parâmetros: {GERACOES} gerações, {PERCENTUAL:.0%} de espalhadores, "
           f"limiar {LIMIAR}, semente {SEMENTE}\n")
+    aviso = aviso_de_versao(ambiente["python"])
+    if aviso:
+        print(aviso)
+        print()
 
     relatorio = ["# Verificação da seção 3.4.2 — Medições", "",
                  "Reprodução das Tabelas 1 e 2 do trabalho nesta máquina, para conferir "

@@ -87,5 +87,30 @@ class TestReferenciasPublicadas(unittest.TestCase):
         self.assertAlmostEqual(etapas, v.PUBLICADO_TABELA2["total"], places=3)
 
 
+class TestAvisoDeVersao(unittest.TestCase):
+    """O padrão do projeto é Python 3.11; outra versão precisa avisar."""
+
+    def test_versao_padrao_nao_avisa(self):
+        self.assertIsNone(v.aviso_de_versao("3.11.7"))
+        self.assertIsNone(v.aviso_de_versao("3.11.0"))
+
+    def test_versao_diferente_avisa(self):
+        for versao in ("3.12.10", "3.13.5", "3.10.13"):
+            with self.subTest(versao=versao):
+                aviso = v.aviso_de_versao(versao)
+                self.assertIsNotNone(aviso)
+                self.assertIn(versao, aviso)
+                self.assertIn(v.VERSAO_PADRAO, aviso)
+
+    def test_sem_argumento_usa_a_versao_do_ambiente(self):
+        """Chamada sem argumento (como o main faz) não pode explodir."""
+        import platform
+        aviso = v.aviso_de_versao()
+        if platform.python_version().startswith("3.11."):
+            self.assertIsNone(aviso)
+        else:
+            self.assertIsNotNone(aviso)
+
+
 if __name__ == "__main__":
     unittest.main()

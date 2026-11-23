@@ -2,6 +2,10 @@
 
 Reprodução das Tabelas 1 e 2 do trabalho nesta máquina, para conferir se os resultados se mantêm.
 
+> **Padrão de execução: Python 3.11.7** — é a versão do artigo e a usada na maioria dos testes do
+> projeto. A tabela em 3.12.10 no fim do documento é só uma conferência complementar.
+
+
 ## Ambiente
 
 - **processador**: Intel64 Family 6 Model 151 Stepping 2, GenuineIntel
