@@ -105,25 +105,73 @@ concorrentes (Shao et al., 2024), checadores de fatos (Tambuscio et al., 2015), 
 
 ## 6. O que falta (ordem sugerida)
 
+Esta lista acompanha o [roadmap do grupo](https://claude.ai/artifact/X6U3gNTZ2FdzgZEkaNCkkC),
+onde cada um marca as suas tarefas.
+
+0. [ ] **Confirmar o prazo de entrega e o número do grupo** (o número vai no nome do vídeo).
 1. [ ] **Abrir o PR** de `feat/implementacoes-codigo` para a `main` e conseguir 1 aprovação.
-2. [ ] **Script de experimentos** em Python (`experimentos/`): variar tamanho da grade, gerações,
-   % de espalhadores, nº de *threads*/processos e nº de *workers*/hosts; limiar 2; repetições;
-   CSV com SO e CPU.
+   - [ ] revisar se todo o código está comentado em português;
+   - [ ] conferir se o README tem as instruções de execução das três versões (Windows e Linux).
+2. [ ] **Script de experimentos** em Python (`experimentos/`). Hoje o código já mede o tempo do
+   laço (`tempo_laco`) e o tempo total com criação de processos/conexões (`tempo_total`), e já
+   aceita os parâmetros de cada cenário; falta o script que roda tudo e calcula as métricas:
+   - [ ] variar tamanho da grade, gerações, % de espalhadores, nº de *threads*/processos e nº de
+     *workers*/hosts, com limiar 2;
+   - [ ] rodar **os mesmos cenários nas três versões** (sequencial, paralela e distribuída);
+   - [ ] 1 execução de aquecimento descartada + pelo menos 5 repetições, reportando a mediana;
+   - [ ] gravar no CSV a **configuração da máquina**: processador, núcleos físicos e lógicos, RAM,
+     sistema operacional, versão do Python e ambiente (notebook na tomada, local ou rede);
+   - [ ] calcular **speedup** (S = T_seq / T_p) e **eficiência** (E = S / p) contra a sequencial,
+     usando `tempo_laco` e também `tempo_total` (mostra o custo de subir processos/conexões);
+   - [ ] (opcional) fração serial de **Karp–Flatt**, para diagnosticar sobrecarga e
+     desbalanceamento.
 3. [ ] **Medir as melhorias de desempenho**: grade compacta × original (`deepcopy`) e `--bits` ×
    1 byte por célula (tempo de comunicação pelo perfil por *worker*).
 4. [ ] **Medir o efeito das melhorias do modelo**: espalhadores por geração com e sem resistência e
    *bots* (`--estatisticas`).
-5. [ ] **Gráficos** de *speedup* e eficiência para o relatório e os slides.
-6. [ ] **Relatório no Overleaf**. `\todo` pendentes (cópia de 23 nov.): introdução 1 · fundamentação 3
+5. [ ] **Tabelas e gráficos** gerados por script, nunca editados à mão: tabela comparativa de
+   tempos das três versões, gráfico de tempo, de *speedup* e de eficiência (paralela e
+   distribuída), e cálculo × comunicação × espera por *worker*.
+6. [ ] **Análises pedidas no enunciado** (subseções de "Análise" no capítulo de experimentos). Os
+   dados já são coletados com `--estatisticas`; falta rodar e interpretar:
+   - [ ] **gargalos**: tempo de cálculo por *worker* e índice de desbalanceamento (mais lento /
+     média);
+   - [ ] **sincronização**: `espera_s` (tempo nas barreiras da paralela e esperando a decisão do
+     coordenador na distribuída);
+   - [ ] **custo de comunicação**: `comunicacao_s` e `bytes_enviados` (só na distribuída; a
+     paralela usa memória compartilhada), com e sem `--bits`;
+   - [ ] **limitações observadas** (GIL no modo *threads*, núcleos P e E do processador, grade
+     pequena demais para compensar a comunicação etc.).
+7. [ ] **Relatório no Overleaf**. `\todo` pendentes (cópia de 23 nov.): introdução 1 · fundamentação 3
    · sequencial 2 · paralela 4 · distribuída 5 · melhorias 5 (faltam as 6 subseções) ·
-   experimentos 13 · conclusão 6 · apêndice de execução 2.
-7. [ ] **Referências** das melhorias 2 e 3 e do uso de IA (o enunciado exige citar).
-8. [ ] **Slides** em PDF.
-9. [ ] **Vídeo** de 10–15 min com todos (MP4 H264 720p 30 fps, AAC estéreo 44,1 kHz, nome
-   `AAAA-MM-DD - Grupo XX - FakeNews.mp4`).
-10. [ ] Rodar paralela e distribuída também no **Linux** e, se possível, a distribuída entre 2 ou
+   experimentos 13 · conclusão 6 · apêndice de execução 2. No capítulo de experimentos: preencher
+   a tabela de ambiente (`tab:ambiente`), descrever os cenários e as repetições, e colocar as
+   tabelas, os gráficos e as análises dos itens 5 e 6 (hoje só a fundamentação tem as fórmulas
+   de *speedup*, eficiência, Amdahl e Gustafson). Na conclusão, a tabela de contribuições com os
+   quatro integrantes; no apêndice, o registro do uso de IA. Cada seção é revisada por quem fez
+   aquela parte do código.
+8. [ ] **Referências** das melhorias 2 e 3 e do uso de IA (o enunciado exige citar).
+9. [ ] **Slides** em PDF:
+   - [ ] todos os tópicos do enunciado: problema, modelo, sequencial, paralela e distribuída,
+     divisão da matriz, tabelas e gráficos, *speedup* e eficiência, dificuldades, melhorias,
+     referências;
+   - [ ] contribuição individual de cada integrante;
+   - [ ] registro do uso de IA, de código externo e de bibliotecas;
+   - [ ] exportar em PDF.
+10. [ ] **Vídeo** de 10–15 min com todos:
+    - [ ] roteiro em que cada integrante explica uma parte do código (decisões, divisão do
+      processamento, sincronização e comunicação, quem fez o quê);
+    - [ ] demonstrar a paralela e a distribuída funcionando e a análise dos resultados;
+    - [ ] gravar com todos de câmera ligada (quem não aparece fica com zero);
+    - [ ] conferir o formato: MP4, H.264 1280×720 a 30 fps, AAC estéreo 44,1 kHz, sem marca
+      d'água, edição só para cortar (cada erro de formato tira 0,5);
+    - [ ] nome do arquivo `AAAA-MM-DD - Grupo XX - FakeNews.mp4`.
+11. [ ] Rodar paralela e distribuída também no **Linux** e, se possível, a distribuída entre 2 ou
     mais máquinas reais.
-11. [ ] Montar o **ZIP** final.
+12. [ ] **Entrega**:
+    - [ ] montar o **ZIP** com código, instruções, PDF dos slides e vídeo (ou link na nuvem
+      acessível até o fim da avaliação);
+    - [ ] enviar no **Moodle** antes do prazo (atraso não é aceito).
 
 ---
 
@@ -132,3 +180,5 @@ concorrentes (Shao et al., 2024), checadores de fatos (Tambuscio et al., 2015), 
 - **23 nov. 2026**: arquivo criado. Três versões, 6 melhorias e testes na branch
   `feat/implementacoes-codigo` (no GitHub, ainda sem PR). Relatório sincronizado com a fundamentação
   e as referências. Nenhum experimento rodado.
+- **23 nov. 2026**: checklist detalhada com as métricas e análises de desempenho pedidas no
+  enunciado e alinhada ao roadmap do grupo (slides, vídeo e entrega).
