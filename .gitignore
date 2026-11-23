@@ -35,3 +35,6 @@ build/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Pacote portátil do teste entre máquinas (gerado por distribuido/rede/empacotar.ps1)
+distribuido/rede/*.zip
