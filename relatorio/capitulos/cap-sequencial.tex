@@ -24,9 +24,114 @@ A cada geração, o novo estado de cada célula é calculado a partir da geraç�
 
 As bordas da matriz são fixas (sem continuidade toroidal): células da borda possuem menos de oito vizinhos. A grade inicial é gerada com semente fixa, e as regras de transição são determinísticas; portanto, para os mesmos parâmetros, a evolução é sempre a mesma. Essa propriedade é usada para verificar a correção das versões paralela e distribuída.
 
-\section{Funcionamento da implementação sequencial}
+\section{Funcionamento da implementação sequencial}\label{sec:funcionamento-sequencial}
 
-\todo{Fluxograma; funções \texttt{criar\_grade}, \texttt{contar\_vizinhos\_espalhadores}, \texttt{proxima\_geracao}, \texttt{contar\_estados}; uso de nova matriz por geração para evitar atualização ``ao vivo''.}
+A implementação sequencial fornecida (\texttt{fakenews\_sequencial\_original.py}) é a referência de comportamento deste trabalho: as versões paralela e distribuída devem produzir, geração a geração, exatamente as mesmas grades que ela. O programa é um único arquivo em Python, organizado em cinco funções principais e uma função auxiliar de exibição, e segue o fluxo da Figura~\ref{fig:fluxograma-sequencial}.
+
+\begin{figure}[!htb]
+    \caption{Fluxograma da implementação sequencial}
+    \label{fig:fluxograma-sequencial}
+    \centering
+    \begin{tikzpicture}[x=1cm, y=1cm, font=\small,
+            etapa/.style={draw, align=center, minimum width=6.4cm, minimum height=0.8cm},
+            extremo/.style={draw, rounded corners=0.4cm, minimum width=2.4cm, minimum height=0.8cm}]
+        \node[extremo] (inicio) at (0, 0) {Início};
+        \node[etapa] (criar) at (0, -1.4) {Criar a grade inicial com semente fixa\\(\texttt{criar\_grade})};
+        \node[etapa] (inicial) at (0, -2.8) {Contar os estados e imprimir\\os parâmetros e o estado inicial};
+        \node[etapa] (relogio) at (0, -4.1) {Iniciar a medição de tempo};
+        \node[etapa] (proxima) at (0, -5.6) {Calcular a próxima geração\\a partir da atual\\(\texttt{proxima\_geracao})};
+        \node[etapa] (contar) at (0, -7.3) {Contar os estados e imprimir a geração\\(\texttt{contar\_estados})};
+        %% Losango desenhado com caminho próprio (sem biblioteca do TikZ)
+        \draw (0, -8.3) -- (3.0, -9.4) -- (0, -10.5) -- (-3.0, -9.4) -- cycle;
+        \node[align=center] at (0, -9.4) {Há espalhadores\\e ainda restam\\gerações?};
+        \node[etapa] (final) at (0, -11.7) {Encerrar a medição e imprimir\\o tempo e a contagem final};
+        \node[extremo] (fim) at (0, -13.0) {Fim};
+        \draw[->] (inicio) -- (criar);
+        \draw[->] (criar) -- (inicial);
+        \draw[->] (inicial) -- (relogio);
+        \draw[->] (relogio) -- (proxima);
+        \draw[->] (proxima) -- (contar);
+        \draw[->] (contar) -- (0, -8.3);
+        \draw[->] (0, -10.5) -- node[right] {não} (final);
+        \draw[->] (-3.0, -9.4) -- node[above] {sim} (-4.2, -9.4) |- (proxima.west);
+        \draw[->] (final) -- (fim);
+    \end{tikzpicture}
+    \fonte{}
+    \addcontentsline{loge}{figure}{\protect\numberline{\thefigure}Fluxograma da implementação sequencial}
+\end{figure}
+
+Primeiro, a grade inicial é criada e o estado inicial é impresso. Em seguida, cada iteração do laço calcula uma geração inteira e imprime a contagem dos estados. O laço termina quando não há mais espalhadores ou quando o número de gerações pedido é atingido; por fim, o programa imprime o tempo de execução e a distribuição final dos estados.
+
+\subsection{Estrutura e funções}\label{sub:funcoes-sequencial}
+
+A grade é uma lista de listas de inteiros, uma lista por linha, e os três estados são representados pelas constantes \texttt{IGNORANTE}~(0), \texttt{ESPALHADOR}~(1) e \texttt{INATIVO}~(2).
+
+A função \texttt{criar\_grade} gera a população inicial. Ela inicializa o gerador pseudoaleatório do Python com \texttt{random.seed(semente)}, em que a semente vale 42 por padrão, preenche toda a grade com ignorantes e sorteia $\lfloor L \cdot C \cdot p \rfloor$ posições com \texttt{random.randint}, sendo $p$ o percentual inicial de espalhadores; cada posição sorteada torna-se espalhadora. O sorteio é feito com reposição: uma mesma célula pode ser sorteada mais de uma vez, e por isso o número real de espalhadores pode ser menor que o pedido. Na grade de $100 \times 100$ com 5\% de espalhadores, por exemplo, são feitos 500 sorteios, que resultam em 490 espalhadores; é por esse motivo que o programa imprime a quantidade de ``espalhadores reais''. Essa é a única parte aleatória do programa: como a semente é fixa, a mesma grade inicial é obtida em toda execução com os mesmos parâmetros.
+
+A função \texttt{contar\_vizinhos\_espalhadores} recebe a grade e a posição $(i, j)$ de uma célula e conta quantos dos seus vizinhos na vizinhança de Moore são espalhadores. Para isso, percorre os deslocamentos $\Delta i, \Delta j \in \{-1, 0, 1\}$, descarta o par $(0, 0)$, que corresponde à própria célula, e só consulta a posição vizinha se ela estiver dentro da grade, isto é, se $0 \le i + \Delta i < L$ e $0 \le j + \Delta j < C$. É esse teste de limite que implementa as bordas fixas descritas na Seção~\ref{sec:automatos-celulares}: o vizinho que estaria fora da matriz simplesmente não é contado.
+
+A função \texttt{proxima\_geracao} aplica as regras de transição a toda a grade. Ela cria a nova grade como uma cópia independente da atual (\texttt{deepcopy}) e percorre todas as células, linha a linha. Para cada célula ignorante, conta os vizinhos espalhadores e, se o total for maior ou igual ao limiar $\lambda$ (parâmetro \texttt{limiar\_convencimento}), marca a célula como espalhadora na nova grade; caso contrário, a célula mantém o valor copiado e continua ignorante. Cada espalhador passa a inativo, e cada inativo permanece inativo. A contagem de vizinhos é feita apenas para as células ignorantes, pois só elas mudam de estado por influência dos vizinhos. Durante toda a varredura, os estados são lidos somente da grade atual e escritos somente na nova grade; assim, nenhuma célula enxerga o estado já atualizado de um vizinho, o que implementa a atualização síncrona apresentada na Seção~\ref{sec:automatos-celulares}. Ao final, a nova grade é devolvida e passa a ser a grade atual.
+
+A função \texttt{contar\_estados} percorre a grade inteira e devolve um dicionário com a quantidade de células em cada estado. Esses totais são usados tanto para imprimir o andamento da simulação quanto para decidir a parada. A função auxiliar \texttt{imprimir\_grade} mostra no terminal até $30 \times 30$ células da grade, com os símbolos ``.'', ``E'' e ``N'', e só é chamada quando a opção \texttt{mostrar\_grade} está ativada.
+
+Por fim, a função \texttt{executar\_simulacao} coordena a execução descrita na Figura~\ref{fig:fluxograma-sequencial}. Seus parâmetros são o número de linhas e de colunas, o número máximo de gerações, o percentual inicial de espalhadores, o limiar de convencimento e a opção \texttt{mostrar\_grade}. Os valores padrão da função são uma grade de $100 \times 100$, 50~gerações, 2\% de espalhadores e limiar~2, mas o bloco principal do arquivo a chama com 5\% de espalhadores e limiar~3. Depois de criar a grade e imprimir os parâmetros e a contagem inicial, a função executa o laço de gerações; após cada geração, imprime uma linha com as quantidades de ignorantes, espalhadores e inativos e interrompe o laço antecipadamente se não houver mais espalhadores, já que, sem eles, nenhum ignorante pode ser convencido e a grade não muda mais. O tempo de execução é medido com \texttt{time.time()} imediatamente antes e depois do laço, de modo que o intervalo medido inclui o cálculo, a contagem e as impressões de cada geração. Ao final, são impressos esse tempo e a quantidade e o percentual de células em cada estado.
+
+\subsection{Exemplo de execução}\label{sub:exemplo-sequencial}
+
+Para ilustrar o funcionamento passo a passo, a Figura~\ref{fig:exemplo-sequencial} mostra a evolução de uma grade de $5 \times 5$ criada pela própria função \texttt{criar\_grade}, com semente~42 e 12\% de espalhadores (três sorteios, que resultaram em três espalhadores), e evoluída por \texttt{proxima\_geracao} com limiar $\lambda = 2$. As posições são indicadas por (linha, coluna), numeradas a partir de 0, como no código. Abaixo de cada grade aparecem as quantidades de ignorantes (I), espalhadores (E) e inativos (N), as mesmas que o programa imprime a cada geração.
+
+\begin{figure}[!htb]
+    \caption{Exemplo de evolução de uma grade de 5~$\times$~5 com limiar 2}
+    \label{fig:exemplo-sequencial}
+    \centering
+    %% Gerado executando criar_grade(5, 5, 0.12) e proxima_geracao(grade, 2) do código fornecido.
+    %% \painel{x}{y}{espalhadores}{inativos}{geração}{contagem}; posições em linha/coluna.
+    \begin{tikzpicture}[x=0.55cm, y=0.55cm]
+        \newcommand*{\painel}[6]{%
+            \begin{scope}[shift={(#1,#2)}]
+                \foreach \i/\j in {#3} {\filldraw[fill=red!55] (\j,-\i) rectangle +(1,-1) node[midway] {\scriptsize\textbf{E}};}
+                \foreach \i/\j in {#4} {\filldraw[fill=black!25] (\j,-\i) rectangle +(1,-1) node[midway] {\scriptsize N};}
+                \foreach \k in {0,...,5} {\draw (\k,0) -- (\k,-5); \draw (0,-\k) -- (5,-\k);}
+                \foreach \k in {0,...,4} {
+                    \node[font=\tiny] at (\k+0.5, 0.4) {\k};
+                    \node[font=\tiny] at (-0.4, -\k-0.5) {\k};
+                }
+                \node[font=\small] at (2.5,-5.8) {#5};
+                \node[font=\scriptsize] at (2.5,-6.7) {#6};
+            \end{scope}}
+        \painel{0}{0}{0/0,1/1,2/1}{}{$t=0$}{I\,22 \quad E\,3 \quad N\,0}
+        \painel{7}{0}{0/1,1/0,1/2,2/0,2/2}{0/0,1/1,2/1}{$t=1$}{I\,17 \quad E\,5 \quad N\,3}
+        \painel{14}{0}{0/2,1/3,2/3,3/1}{0/0,0/1,1/0,1/1,1/2,2/0,2/1,2/2}{$t=2$}{I\,13 \quad E\,4 \quad N\,8}
+        \painel{0}{-9}{0/3,1/4,2/4,3/2}{0/0,0/1,0/2,1/0,1/1,1/2,1/3,2/0,2/1,2/2,2/3,3/1}{$t=3$}{I\,9 \quad E\,4 \quad N\,12}
+        \painel{7}{-9}{0/4,3/3}{0/0,0/1,0/2,0/3,1/0,1/1,1/2,1/3,1/4,2/0,2/1,2/2,2/3,2/4,3/1,3/2}{$t=4$}{I\,7 \quad E\,2 \quad N\,16}
+        \painel{14}{-9}{}{0/0,0/1,0/2,0/3,0/4,1/0,1/1,1/2,1/3,1/4,2/0,2/1,2/2,2/3,2/4,3/1,3/2,3/3}{$t=5$}{I\,7 \quad E\,0 \quad N\,18}
+        %% Legenda
+        \draw (1,-17) rectangle +(1,-1);
+        \node[anchor=west, font=\small] at (2.3,-17.5) {Ignorante (I)};
+        \filldraw[fill=red!55] (7,-17) rectangle +(1,-1) node[midway] {\scriptsize\textbf{E}};
+        \node[anchor=west, font=\small] at (8.3,-17.5) {Espalhador (E)};
+        \filldraw[fill=black!25] (13.5,-17) rectangle +(1,-1) node[midway] {\scriptsize N};
+        \node[anchor=west, font=\small] at (14.8,-17.5) {Inativo (N)};
+    \end{tikzpicture}
+    \fonte{}
+    \addcontentsline{loge}{figure}{\protect\numberline{\thefigure}Exemplo de evolução de uma grade de 5~$\times$~5 com limiar 2}
+\end{figure}
+
+Na geração inicial ($t=0$), há espalhadores em (0,0), (1,1) e (2,1). A célula (1,0), na borda esquerda, tem apenas cinco vizinhos, mas três deles são espalhadores; as células (0,1), (1,2), (2,0) e (2,2) têm dois vizinhos espalhadores cada. Todas atingem o limiar e tornam-se espalhadoras em $t=1$. Já as células (0,2), (3,0), (3,1) e (3,2) têm apenas um vizinho espalhador e continuam ignorantes. Os três espalhadores iniciais tornam-se inativos: cada espalhador propaga a notícia durante uma única geração.
+
+Em $t=1$, os cinco novos espalhadores formam uma frente em volta das células que se tornaram inativas. Convertem-se as células (0,2), (1,3) e (2,3), com dois vizinhos espalhadores cada, e (3,1), cujos vizinhos espalhadores são (2,0) e (2,2). A célula (2,1) também é vizinha de (3,1), mas, por estar inativa, não é contada: inativos não influenciam ninguém. A célula (3,0) tem novamente apenas um vizinho espalhador, (2,0), e continua ignorante.
+
+Em $t=2$, a frente continua a avançar para a direita e para baixo. Tornam-se espalhadoras (0,3), (1,4) e (2,4), e também (3,2), cujos vizinhos espalhadores são (2,3) e (3,1). As demais células ignorantes têm no máximo um vizinho espalhador e não mudam; entre elas estão (3,0) e as células (4,0), (4,1) e (4,2) da última linha, vizinhas apenas de (3,1).
+
+Em $t=3$, somente duas células atingem o limiar: (0,4), no canto superior direito, vizinha de (0,3) e (1,4), e (3,3), vizinha de (2,4) e (3,2). As outras células ignorantes, como (3,4) e as da última linha, têm no máximo um vizinho espalhador, e a frente começa a se desfazer.
+
+Em $t=4$, os dois espalhadores restantes estão isolados: (0,4) só tem vizinhos inativos, e cada célula ignorante vizinha de (3,3), isto é, (3,4), (4,2), (4,3) e (4,4), tem apenas esse vizinho espalhador. Nenhuma célula é convertida, e em $t=5$ não há mais espalhadores. Nesse ponto, \texttt{executar\_simulacao} interrompe o laço, mesmo que o número de gerações pedido seja maior, e a grade termina com 7 ignorantes e 18 inativos: as células (3,0) e (3,4) e toda a última linha nunca tiveram dois vizinhos espalhadores na mesma geração.
+
+O exemplo evidencia dois aspectos que determinam a dinâmica do modelo. Como cada espalhador atua por uma única geração, as influências recebidas em gerações diferentes não se acumulam: uma célula só é convertida se tiver ao menos $\lambda$ vizinhos espalhadores ao mesmo tempo. Por isso, quando a frente de propagação se estreita, por exemplo junto às bordas, onde há menos vizinhos, ela deixa de atingir o limiar, e a propagação se extingue antes de alcançar toda a população.
+
+\subsection{Versão sequencial refatorada}\label{sub:sequencial-refatorada}
+
+Além do código fornecido, foi desenvolvida uma versão sequencial refatorada (\texttt{sequencial/fakenews\_sequencial.py}), que usa o mesmo núcleo de cálculo das versões paralela e distribuída (\texttt{comum/modelo.py}). Ela mantém as regras de transição e a grade inicial, gerada pela própria função \texttt{criar\_grade} com a mesma semente, e muda apenas a representação dos dados: a grade passa a ser um vetor de bytes com uma linha de zeros acima e outra abaixo, e duas grades são alternadas entre as gerações, em vez de uma cópia com \texttt{deepcopy} a cada geração. Testes automatizados verificam que ela produz, geração a geração, as mesmas grades que o código original. Essa versão é a linha de base dos experimentos (Seção~\ref{cap:experimentos}), pois executa o mesmo cálculo das versões paralela e distribuída sem nenhum custo de comunicação ou de sincronização; seus detalhes são apresentados na Seção~\ref{cap:melhorias}. A seguir, analisa-se o custo computacional da implementação sequencial.
 
 \section{Análise de custo}
 
