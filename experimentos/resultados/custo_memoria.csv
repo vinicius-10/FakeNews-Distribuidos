@@ -1,0 +1,6 @@
+linhas,colunas,estrutura,bytes,bytes_por_celula,mib
+1000,1000,lista de listas (criar_grade),8860376,8.86,8.45
+1000,1000,cópia com deepcopy,8864912,8.86,8.45
+1000,1000,grade nova devolvida por proxima_geracao,8860432,8.86,8.45
+1000,1000,pico durante proxima_geracao,8938576,8.94,8.52
+1000,1000,vetor de bytes com moldura (refatorada),1038437,1.04,0.99
