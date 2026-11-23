@@ -1,0 +1,9 @@
+item,valor
+processador,"Intel64 Family 6 Model 151 Stepping 2, GenuineIntel"
+nucleos_fisicos,16
+nucleos_logicos,24
+memoria_gb,31.8
+sistema,Windows 10 (10.0.26300)
+python,3.11.7
+implementacao,CPython
+ambiente,"desktop na tomada, demais programas fechados; distribuida em localhost"

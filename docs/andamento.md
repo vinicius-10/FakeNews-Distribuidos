@@ -134,8 +134,13 @@ onde cada um marca as suas tarefas.
    *worker*) e `modelo.py` (melhorias do modelo).
    - [x] variar tamanho da grade (500², 1000², 2000²) e nº de processos/*threads*/*workers*
      (1 a 24), com limiar 2;
-   - [ ] variar **gerações** e **% de espalhadores** (o `medir.py` já aceita `--geracoes` e
-     `--percentual`; as baterias usaram só 20 gerações e 5%);
+   - [x] variar **gerações** e **% de espalhadores** (o `medir.py` já aceita `--geracoes` e
+     `--percentual`; as baterias usaram só 20 gerações e 5%). A variação de percentual e limiar
+     virou o `experimentos/bateria.py`: grade cartesiana percentual × limiar × tamanho, com
+     equivalência conferida **por cenário** (as funções do `analisar.py` agrupam por
+     versão/tamanho/workers e misturariam cenários diferentes). Rodada de 18 cenários, 702
+     medições, todas com a mesma grade da sequencial:
+     [`resultados/bateria/resumo.md`](../experimentos/resultados/bateria/resumo.md);
    - [x] rodar **os mesmos cenários nas três versões**; o SHA-256 da grade final confirma que
      todas deram o mesmo resultado em todas as execuções;
    - [x] 1 execução de aquecimento descartada + repetições, reportando a mediana (5 ou mais na
@@ -245,3 +250,13 @@ onde cada um marca as suas tarefas.
   depois que todos os *workers* conectam; os CSVs antigos da distribuída têm `tempo_total` com a
   subida dos processos, o `tempo_laco` não mudou. A grade impressa com `--mostrar-grade` ficou
   idêntica à do professor (espaço no fim da linha).
+- **23 nov. 2026**: criado o `experimentos/bateria.py`, que fecha o item de variar **% de
+  espalhadores** e **limiar**. Grade cartesiana percentual × limiar × tamanho × versão ×
+  trabalhadores; 18 cenários e 702 medições rodadas nesta máquina, **todas** com a mesma grade da
+  sequencial. Os testes do módulo (16) sobem a suíte para 72. Duas descobertas ficaram travadas em
+  teste: (1) `analisar.agrupar` e `verificar_equivalencia` ignoram percentual e limiar — no CSV
+  inteiro da bateria a mediana mistura cenários e a equivalência acusa divergência falsa, então o
+  `bateria.py` fatia por cenário antes de analisar; (2) com 1 repetição, um único outlier de
+  agendamento fez a paralela de **1 worker** parecer 2,15× mais rápida que a sequencial — o
+  relatório agora avisa quando `--repeticoes < 3`. O `--exportar-cenarios` gera o JSON que o setup
+  de 3 máquinas consome.

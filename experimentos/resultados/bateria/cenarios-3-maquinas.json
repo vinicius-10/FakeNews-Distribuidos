@@ -1,0 +1,163 @@
+{
+  "gerado_em": "2026-11-23 19:58:49",
+  "semente": 42,
+  "geracoes": 20,
+  "versoes_locais": [
+    "sequencial",
+    "paralela_processos",
+    "paralela_threads",
+    "distribuida_local",
+    "distribuida_bits"
+  ],
+  "workers": [
+    1,
+    2,
+    4
+  ],
+  "cenarios": [
+    {
+      "linhas": 300,
+      "colunas": 300,
+      "percentual": 0.01,
+      "limiar": 1,
+      "geracoes": 20,
+      "semente": 42
+    },
+    {
+      "linhas": 600,
+      "colunas": 600,
+      "percentual": 0.01,
+      "limiar": 1,
+      "geracoes": 20,
+      "semente": 42
+    },
+    {
+      "linhas": 300,
+      "colunas": 300,
+      "percentual": 0.01,
+      "limiar": 2,
+      "geracoes": 20,
+      "semente": 42
+    },
+    {
+      "linhas": 600,
+      "colunas": 600,
+      "percentual": 0.01,
+      "limiar": 2,
+      "geracoes": 20,
+      "semente": 42
+    },
+    {
+      "linhas": 300,
+      "colunas": 300,
+      "percentual": 0.01,
+      "limiar": 3,
+      "geracoes": 20,
+      "semente": 42
+    },
+    {
+      "linhas": 600,
+      "colunas": 600,
+      "percentual": 0.01,
+      "limiar": 3,
+      "geracoes": 20,
+      "semente": 42
+    },
+    {
+      "linhas": 300,
+      "colunas": 300,
+      "percentual": 0.05,
+      "limiar": 1,
+      "geracoes": 20,
+      "semente": 42
+    },
+    {
+      "linhas": 600,
+      "colunas": 600,
+      "percentual": 0.05,
+      "limiar": 1,
+      "geracoes": 20,
+      "semente": 42
+    },
+    {
+      "linhas": 300,
+      "colunas": 300,
+      "percentual": 0.05,
+      "limiar": 2,
+      "geracoes": 20,
+      "semente": 42
+    },
+    {
+      "linhas": 600,
+      "colunas": 600,
+      "percentual": 0.05,
+      "limiar": 2,
+      "geracoes": 20,
+      "semente": 42
+    },
+    {
+      "linhas": 300,
+      "colunas": 300,
+      "percentual": 0.05,
+      "limiar": 3,
+      "geracoes": 20,
+      "semente": 42
+    },
+    {
+      "linhas": 600,
+      "colunas": 600,
+      "percentual": 0.05,
+      "limiar": 3,
+      "geracoes": 20,
+      "semente": 42
+    },
+    {
+      "linhas": 300,
+      "colunas": 300,
+      "percentual": 0.1,
+      "limiar": 1,
+      "geracoes": 20,
+      "semente": 42
+    },
+    {
+      "linhas": 600,
+      "colunas": 600,
+      "percentual": 0.1,
+      "limiar": 1,
+      "geracoes": 20,
+      "semente": 42
+    },
+    {
+      "linhas": 300,
+      "colunas": 300,
+      "percentual": 0.1,
+      "limiar": 2,
+      "geracoes": 20,
+      "semente": 42
+    },
+    {
+      "linhas": 600,
+      "colunas": 600,
+      "percentual": 0.1,
+      "limiar": 2,
+      "geracoes": 20,
+      "semente": 42
+    },
+    {
+      "linhas": 300,
+      "colunas": 300,
+      "percentual": 0.1,
+      "limiar": 3,
+      "geracoes": 20,
+      "semente": 42
+    },
+    {
+      "linhas": 600,
+      "colunas": 600,
+      "percentual": 0.1,
+      "limiar": 3,
+      "geracoes": 20,
+      "semente": 42
+    }
+  ]
+}
