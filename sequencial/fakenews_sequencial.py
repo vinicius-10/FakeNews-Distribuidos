@@ -77,8 +77,12 @@ def executar_simulacao(parametros, mostrar=True, mostrar_grade=False, ao_fim_da_
         estatisticas.registrar_trabalhador(0, tempo, 0.0, 0.0)
     if mostrar:
         imprimir_resultado(tempo, contagem, linhas * colunas)
+    # `tempo_total` existe também aqui (igual ao tempo do laço) para que as três
+    # versões devolvam exatamente o mesmo dicionário e o código de análise não
+    # precise tratar a sequencial como caso especial.
     return {"grade": bytes(atual), "contagem": contagem,
-            "geracoes_executadas": geracoes_executadas, "tempo_laco": tempo}
+            "geracoes_executadas": geracoes_executadas, "tempo_laco": tempo,
+            "tempo_total": tempo}
 
 
 def main(argv=None):
