@@ -163,7 +163,7 @@ e, para cada célula, roda aquecimento + repetições. Saídas na pasta `--saida
 | `medicoes.csv` | uma linha por repetição, **no mesmo formato do `medir.py`** (mesmos campos, então `analisar.py` continua servindo) |
 | `resumo.md` | uma seção por cenário: mediana, desvio, speedup, eficiência, gerações e veredito de equivalência |
 | `ambiente.csv` | configuração da máquina, igual ao `medir.py` |
-| `cenarios.json` | os mesmos cenários para o setup de 3 máquinas (`--exportar-cenarios`) |
+| `cenarios.json` | lista dos mesmos cenários (`--exportar-cenarios`), para repetir à mão no teste entre 3 máquinas; nenhum script lê esse arquivo |
 
 **Cuidado que o script resolve:** `analisar.agrupar` agrupa por
 `(versão, tamanho, workers)` e `analisar.verificar_equivalencia` compara hashes por
@@ -196,7 +196,19 @@ versões dentro do mesmo cenário — que é o que o speedup da bateria faz.
 
 **Sobre poucas repetições:** com 1 repetição, um único outlier de agendamento do
 sistema pode fazer a paralela de 1 worker parecer 2× mais rápida que a sequencial
-(já aconteceu no `--rapida`). O relatório avisa quando `--repeticoes < 3`.
+(já aconteceu no `--rapida`). O padrão é `--repeticoes 5` (mínimo do CONTRIBUTING) e
+o resumo avisa quando a bateria usou menos.
+
+**Conferência do speedup com 1 worker:** com 1 trabalhador não há paralelismo, então
+a paralela (processos) e a distribuída têm de dar speedup entre 0,90 e 1,10 contra a
+sequencial. O `resumo.md` aponta, por cenário, o que sair dessa faixa (as *threads*
+ficam de fora: o GIL as deixa abaixo de 1 de propósito). Na rodada gravada em
+`resultados/bateria/` (Windows, 3 repetições), **43 de 54** configurações com 1
+worker (paralela e distribuída) ficaram acima de 1,10, até 1,35: a sequencial e as *threads*, que rodam no
+processo principal da bateria, saíram de 10% a 25% mais lentas que as versões que
+rodam num processo novo. Na bateria do `medir.py` isso não aparece (1000², 1 worker:
+0,99 no Windows; 0,95 no Linux). Até a causa ser explicada, use o speedup da bateria
+só para comparar versões paralelas entre si, não contra a sequencial.
 
 ## Arquivos gerados
 

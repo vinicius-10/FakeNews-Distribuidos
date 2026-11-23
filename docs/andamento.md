@@ -134,13 +134,19 @@ onde cada um marca as suas tarefas.
    *worker*) e `modelo.py` (melhorias do modelo).
    - [x] variar tamanho da grade (500², 1000², 2000²) e nº de processos/*threads*/*workers*
      (1 a 24), com limiar 2;
-   - [x] variar **gerações** e **% de espalhadores** (o `medir.py` já aceita `--geracoes` e
-     `--percentual`; as baterias usaram só 20 gerações e 5%). A variação de percentual e limiar
-     virou o `experimentos/bateria.py`: grade cartesiana percentual × limiar × tamanho, com
-     equivalência conferida **por cenário** (as funções do `analisar.py` agrupam por
-     versão/tamanho/workers e misturariam cenários diferentes). Rodada de 18 cenários, 702
-     medições, todas com a mesma grade da sequencial:
+   - [x] variar **% de espalhadores** e **limiar**: `experimentos/bateria.py`, grade cartesiana
+     percentual (1%, 5%, 10%) × limiar (1, 2, 3) × tamanho (300², 600²), com equivalência
+     conferida **por cenário** (as funções do `analisar.py` agrupam por versão/tamanho/workers e
+     misturariam cenários diferentes). Rodada de 18 cenários e 702 medições no Windows, todas com
+     a mesma grade da sequencial:
      [`resultados/bateria/resumo.md`](../experimentos/resultados/bateria/resumo.md);
+   - [ ] refazer a bateria com **5 repetições** (a rodada gravada usou 3; o padrão agora é 5) e
+     explicar por que, nela, a sequencial e as *threads* (processo principal) saíram 10–25% mais
+     lentas que a paralela e a distribuída com 1 *worker* (processo novo): 43 de 54 configurações
+     com 1 *worker* (paralela e distribuída) deram *speedup* acima de 1,10, até 1,35. O `resumo.md` aponta esses casos;
+     até lá, o *speedup* da bateria contra a sequencial não vai para o relatório;
+   - [ ] variar o **número de gerações** (fixo em 20 em todas as baterias; `medir.py` e
+     `bateria.py` já aceitam `--geracoes`);
    - [x] rodar **os mesmos cenários nas três versões**; o SHA-256 da grade final confirma que
      todas deram o mesmo resultado em todas as execuções;
    - [x] 1 execução de aquecimento descartada + repetições, reportando a mediana (5 ou mais na
@@ -267,5 +273,10 @@ onde cada um marca as suas tarefas.
   inteiro da bateria a mediana mistura cenários e a equivalência acusa divergência falsa, então o
   `bateria.py` fatia por cenário antes de analisar; (2) com 1 repetição, um único outlier de
   agendamento fez a paralela de **1 worker** parecer 2,15× mais rápida que a sequencial — o
-  relatório agora avisa quando `--repeticoes < 3`. O `--exportar-cenarios` gera o JSON que o setup
-  de 3 máquinas consome.
+  relatório agora avisa quando `--repeticoes < 3`. O `--exportar-cenarios` gera um JSON com a lista
+  dos cenários para repetir no teste entre 3 máquinas.
+- **23 nov. 2026**: revisão do PR #11. O `bateria.py` passou a usar 5 repetições por padrão
+  (CONTRIBUTING) e o `resumo.md` aponta *speedup* com 1 *worker* fora de 0,90–1,10 na paralela e na
+  distribuída; o `resumo.md` da rodada gravada foi regenerado do mesmo CSV (sem medir de novo) e
+  aponta 43 de 54 configurações acima de 1,10. "Variar gerações" voltou para pendente (as baterias
+  usaram 20 gerações). O `cenarios.json` é só a lista dos cenários; nenhum script o lê.
