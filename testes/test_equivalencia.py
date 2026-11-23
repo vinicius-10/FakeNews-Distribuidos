@@ -13,7 +13,15 @@ from comum.parametros import ParametrosSimulacao
 from sequencial import fakenews_sequencial as sequencial
 from paralelo import fakenews_paralelo as paralelo
 from distribuido import executar_local
-from auxiliares import Gravador, geracoes_do_professor
+
+# `python -m unittest discover -s testes` põe a pasta testes/ no sys.path e o
+# módulo de apoio é importado como "auxiliares"; já `python -m unittest
+# testes.test_equivalencia` (ou um IDE) importa como pacote. As duas formas
+# funcionam aqui em vez de depender de como o teste foi chamado.
+try:
+    from .auxiliares import Gravador, geracoes_do_professor
+except ImportError:  # rodado com a pasta testes/ como raiz
+    from auxiliares import Gravador, geracoes_do_professor
 
 
 def gravar(funcao, parametros, **opcoes):
