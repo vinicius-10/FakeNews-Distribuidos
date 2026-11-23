@@ -1,0 +1,8 @@
+item,valor
+processador,12th Gen Intel(R) Core(TM) i9-12900F
+nucleos_fisicos,16
+nucleos_logicos,24
+memoria_gb,31.8
+sistema,Windows 10 (10.0.26300)
+python,3.11.7
+implementacao,CPython
