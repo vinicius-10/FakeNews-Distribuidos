@@ -59,12 +59,15 @@ A grade inicial é sorteada com semente fixa e as regras são determinísticas, 
 | Etapa | Situação |
 |---|---|
 | Versão sequencial (fornecida) | ✅ Disponível |
-| Versão paralela | ⏳ Em desenvolvimento |
-| Versão distribuída | ⏳ Em desenvolvimento |
-| Testes de equivalência entre as versões | ⏳ Planejado |
+| Versão sequencial refatorada (núcleo comum) | ✅ Implementada |
+| Versão paralela (processos e threads) | ✅ Implementada |
+| Versão distribuída (sockets TCP) | ✅ Implementada |
+| Testes de equivalência entre as versões | ✅ Implementados |
+| Melhorias (6) | ✅ Implementadas, falta medir e documentar |
 | Experimentos de desempenho | ⏳ Planejado |
-| Melhorias e extensões do modelo | ⏳ Planejado |
 | Relatório e apresentação | 🔄 Em escrita |
+
+Detalhes do que já foi feito e checklist do que falta: [docs/andamento.md](docs/andamento.md).
 
 ## 📚 Conceitos Aplicados
 | Conceito | Onde aparece |
@@ -90,32 +93,89 @@ A grade inicial é sorteada com semente fixa e as regras são determinísticas, 
 ```
 .
 ├── sequencial/
-│   └── fakenews_sequencial_original.py   # Versão fornecida na disciplina (referência)
+│   ├── fakenews_sequencial_original.py   # Versão fornecida na disciplina (referência, não alterar)
+│   └── fakenews_sequencial.py            # Versão refatorada: núcleo comum, 1 processo
+├── comum/                                # Código compartilhado pelas três versões
+│   ├── modelo.py                         # Grade em bytes com moldura, cálculo de uma faixa, contagem
+│   ├── parametros.py                     # Parâmetros e linha de comando; estado inicial (semente 42)
+│   ├── saida.py                          # Impressão no formato do professor
+│   ├── estatisticas.py                   # Melhoria: estatísticas e perfil de tempo (CSV)
+│   └── visualizacao.py                   # Melhoria: animação da grade em HTML
+├── paralelo/
+│   └── fakenews_paralelo.py              # Processos + memória compartilhada (ou threads), barreiras
+├── distribuido/
+│   ├── protocolo.py                      # Mensagens com tamanho no cabeçalho (TCP)
+│   ├── coordenador.py                    # Distribui as faixas, soma as contagens, decide a parada
+│   ├── worker.py                         # Calcula uma faixa e troca as bordas com os vizinhos
+│   └── executar_local.py                 # Coordenador + workers nesta máquina (testes e demonstração)
+├── testes/                               # Testes de equivalência com a versão do professor
 ├── relatorio/                            # Cópia do relatório (LaTeX) mantida no Overleaf
-│   ├── main.tex                          # Arquivo principal
-│   ├── capitulos/                        # Seções do relatório
-│   ├── PreTexto/ e PosTexto/             # Resumo, siglas e apêndices
-│   └── readme.md                         # Como compilar e mudanças no modelo UTFPR
-├── .github/
-│   └── pull_request_template.md          # Modelo de descrição dos pull requests
+├── .github/pull_request_template.md      # Modelo de descrição dos pull requests
 ├── CONTRIBUTING.md                       # Guia de contribuição do grupo
 └── README.md
 ```
 
-As pastas das versões paralela e distribuída, dos testes e dos experimentos serão adicionadas conforme o desenvolvimento avançar.
+### Como as versões se dividem
+- **Divisão da grade:** faixas horizontais de linhas contíguas, uma por *worker*, com tamanhos que diferem no máximo em 1 linha.
+- **Grade em memória:** vetor de bytes (1 byte por célula) com uma linha de zeros em cima e embaixo (moldura). A moldura faz o papel da borda fixa e, na versão distribuída, do *halo*.
+- **Paralela:** as duas grades (atual e próxima) ficam em memória compartilhada; cada geração tem duas barreiras: uma depois do cálculo e outra depois da decisão de parar.
+- **Distribuída:** o coordenador gera a grade uma vez, envia as faixas, soma as contagens e decide a parada; os *workers* trocam as bordas **direto entre si** (cadeia), em ordem par/ímpar para não haver *deadlock*.
 
 ## ▶️ Como Executar
-1. Clone o repositório:
-   ```bash
-   git clone https://github.com/vinicius-10/FakeNews-Distribuidos.git
-   cd FakeNews-Distribuidos
-   ```
-2. Tenha o **Python 3.12** (ou superior) instalado; não há dependências externas.
-3. Execute a versão sequencial:
-   ```bash
-   python sequencial/fakenews_sequencial_original.py
-   ```
-   Os parâmetros (tamanho da grade, gerações, percentual inicial de espalhadores e limiar) ficam no fim do arquivo, na chamada de `executar_simulacao`.
+Requisito: **Python 3.12** (ou superior), sem dependências externas. Todos os comandos rodam a partir da raiz do repositório, iguais no Windows e no Linux (use `py` ou `python3` no lugar de `python` se for o caso).
+
+Parâmetros comuns a todas as versões (padrões iguais aos do professor):
+
+| Parâmetro | Padrão | Significado |
+|---|---|---|
+| `--linhas`, `--colunas` | 100, 100 | tamanho da grade |
+| `--geracoes` | 50 | número máximo de gerações |
+| `--percentual` | 0.05 | fração inicial de espalhadores |
+| `--limiar` | 3 | vizinhos espalhadores para convencer (use 2 nos *benchmarks*) |
+| `--semente` | 42 | semente da grade inicial |
+| `--mostrar-grade` | — | imprime o canto da grade a cada geração |
+
+```bash
+# Sequencial do professor (parâmetros fixos no fim do arquivo)
+python sequencial/fakenews_sequencial_original.py
+
+# Sequencial refatorada
+python -m sequencial.fakenews_sequencial --linhas 500 --colunas 500 --limiar 2
+
+# Paralela: processos (padrão) ou threads
+python -m paralelo.fakenews_paralelo --linhas 1000 --colunas 1000 --limiar 2 --trabalhadores 8
+python -m paralelo.fakenews_paralelo --linhas 1000 --colunas 1000 --limiar 2 --trabalhadores 8 --modo threads
+
+# Distribuída numa máquina só (coordenador + workers locais)
+python -m distribuido.executar_local --workers 4 --linhas 1000 --colunas 1000 --limiar 2
+```
+
+**Distribuída entre computadores** (todos na mesma rede; no Windows, permita o Python no *firewall* em rede privada):
+```bash
+# Na máquina do coordenador (IP 192.168.0.10, por exemplo)
+python -m distribuido.coordenador --host 0.0.0.0 --porta 5000 --workers 3 --linhas 2000 --colunas 2000 --limiar 2
+
+# Em cada máquina, um worker por terminal (a ordem de chegada define a faixa)
+python -m distribuido.worker --coordenador 192.168.0.10:5000 --escutar 0.0.0.0
+```
+
+### Melhorias
+| Melhoria | Como usar |
+|---|---|
+| Grade compacta sem `deepcopy` | sempre ligada nas versões refatorada, paralela e distribuída |
+| Estatísticas e perfil de tempo | `--estatisticas PASTA` grava CSVs por geração e por *worker* (cálculo, comunicação, espera) |
+| Visualização gráfica | `--animacao grade.html` grava uma animação que abre no navegador |
+| Resistência individual | `--resistencia MIN MAX`: limiar de cada pessoa sorteado entre MIN e MAX |
+| Bots | `--bots 0.01`: 1% das células espalham sempre e nunca ficam inativas |
+| Borda compactada em bits | `--bits` na distribuída: 1 bit por célula nas bordas, em vez de 1 byte |
+
+As melhorias do modelo (resistência e bots) ficam desligadas por padrão, para reproduzir o professor; ligadas, as três versões continuam dando o mesmo resultado.
+
+### Testes
+```bash
+python -m unittest discover -s testes -v
+```
+Comparam as versões refatorada, paralela (processos e threads) e distribuída com a versão do professor, geração a geração, em vários tamanhos, limiares e números de *workers*; com as melhorias ligadas, comparam com a sequencial refatorada.
 
 ## 🤝 Como Contribuir
 Antes de contribuir, leia o [guia de contribuição](CONTRIBUTING.md): fluxo de *branches* e *pull requests*, padrão de commits, regras para o código rodar no Windows e no Linux, testes, experimentos e como referenciar o uso de IA.
