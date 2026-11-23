@@ -67,7 +67,7 @@ A grade inicial é sorteada com semente fixa e as regras são determinísticas, 
 | Experimentos de desempenho (medição + tabelas + gráficos) | ✅ Medidos na máquina do grupo |
 | Relatório e apresentação | 🔄 Em escrita |
 
-Detalhes do que já foi feito e checklist do que falta: [docs/andamento.md](docs/andamento.md).
+**Roadmap do grupo** (o que já foi feito, checklist do que falta e histórico): [docs/andamento.md](docs/andamento.md). Quem concluir uma etapa marca a caixa no mesmo PR.
 
 ## 📚 Conceitos Aplicados
 | Conceito | Onde aparece |
