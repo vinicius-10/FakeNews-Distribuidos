@@ -2,21 +2,37 @@
 
 \chapter{Fundamentação teórica}\label{cap:fundamentacao}
 
-Este capítulo apresenta os conceitos que fundamentam o modelo simulado e as técnicas de paralelização utilizadas.
+Esta seção apresenta os conceitos que fundamentam o modelo simulado e as técnicas de paralelização utilizadas.
 
 \section{Autômatos celulares}
+Um \ac{AC} é um sistema discreto composto por uma grade de células, cada uma com um estado finito, que evolui em passos de tempo discretos segundo uma regra local aplicada simultaneamente a todas as células~\cite{Wolfram1983,BertoTagliabue2023}. Na vizinhança de Moore, o próximo estado de uma célula depende dela própria e das até oito células adjacentes a ela.
 
-Um \ac{AC} é um sistema discreto composto por uma grade de células, cada uma com um estado finito, que evolui em passos de tempo discretos segundo uma regra local aplicada simultaneamente a todas as células~\cite{Wolfram1983}. Na vizinhança de Moore, o próximo estado de uma célula depende dela própria e das oito células ao seu redor.
+Como a regra é aplicada a todas as células ao mesmo tempo (atualização síncrona), o estado da geração $t+1$ deve ser calculado apenas a partir da geração $t$~\cite{BertoTagliabue2023}. Se os novos estados fossem escritos na mesma matriz durante a varredura, uma célula poderia ler o estado já modificado de um vizinho e misturar duas gerações, a chamada atualização ``ao vivo''. Para evitá-la, aplica-se a técnica de \textit{double buffering}, que consiste em ler os estados atuais de uma matriz e escrever os estados futuros em outra matriz, estruturalmente independente. Essa mesma separação entre leitura e escrita é a base para evitar condições de corrida nas versões paralela e distribuída (Seção~\ref{sec:computacao-paralela}).
 
-\todo{Explicar atualização síncrona (double buffering) e condições de contorno.}
+No que diz respeito aos limites espaciais da grade (condições de contorno), o modelo adota bordas fixas. Diferentemente de simulações em que as extremidades do mapa se conectam (contorno periódico, em que um elemento que sai pela direita reaparece na esquerda), nesta modelagem as bordas funcionam como paredes intransponíveis. Consequentemente, as células localizadas nos limites da matriz não interagem com o lado oposto da grade e possuem uma vizinhança reduzida: cinco vizinhos nas laterais e três nos cantos, em vez dos oito das células internas.
 
 \section{Modelos de propagação de rumores e de limiar}
 
-\todo{Modelo de Daley--Kendall (ignorante/espalhador/abafador)~\cite{DaleyKendall1964}; modelos de limiar de comportamento coletivo~\cite{Granovetter1978}; relação com os estados do trabalho.}
+A difusão de desinformação e \textit{fake news} pode ser analisada sob a ótica de modelos matemáticos clássicos de epidemiologia e sociologia. O modelo proposto por \citeonline{DaleyKendall1964} para a propagação de rumores divide a população em três categorias fundamentais: os ignorantes (que desconhecem o rumor), os espalhadores (que conhecem e propagam ativamente o rumor) e os abafadores (que conhecem o rumor, mas deixaram de disseminá-lo). Nesse modelo e em variantes como a de Maki--Thompson, o espalhador torna-se abafador ao entrar em contato com alguém que já conhece o rumor, e a dinâmica é estudada também sobre redes sociais complexas~\cite{Moreno2004,Nekovee2007}.
 
-\section{Computação paralela e distribuída}
+No escopo computacional deste trabalho, essas categorias correspondem aos três estados da simulação: Ignorante (estado 0), Espalhador (estado 1) e Inativo (estado 2), respectivamente. O modelo adotado, porém, é uma simplificação determinística: o espalhador torna-se inativo sempre na geração seguinte, independentemente de seus contatos, e a propagação ocorre apenas entre vizinhos da grade. Modelos estocásticos com os mesmos três estados em reticulados, com interação apenas entre vizinhos próximos, também são estudados na literatura~\cite{Coletti2012}.
 
-\todo{Decomposição de domínio; memória compartilhada vs. troca de mensagens; \ac{GIL} do Python; células fantasmas (\textit{halo}); barreiras~\cite{Pacheco2011,Tanenbaum2017}.}
+A transição de um indivíduo do estado de Ignorante para Espalhador não ocorre de forma incondicional, sendo inspirada nos modelos de limiar de comportamento coletivo formalizados por \citeonline{Granovetter1978}. Segundo essa teoria, um indivíduo decide adotar uma nova ideia ou comportamento apenas quando a exposição a ela em sua rede de contatos atinge um limiar crítico. \citeonline{Watts2002} mostra que uma regra de limiar simples, aplicada aos vizinhos de cada agente, é suficiente para produzir cascatas globais de adoção em redes.
+Na implementação do autômato celular, esse conceito é representado pelo parâmetro limiar de convencimento ($\lambda$), que define a quantidade mínima de vizinhos espalhadores necessários ao redor de uma célula ignorante para que ocorra a sua conversão. Diferentemente do modelo de \citeonline{Granovetter1978}, em que cada indivíduo possui o seu próprio limiar, a simulação usa um limiar absoluto (número de vizinhos) e igual para todas as células.
+
+\section{Computação paralela e distribuída}\label{sec:computacao-paralela}
+
+A transformação de uma simulação sequencial em versões paralela e distribuída exige estratégias adequadas de divisão de carga e comunicação. O método fundamental utilizado é a decomposição de domínio, que consiste em particionar a estrutura de dados principal (a matriz bidimensional) em sub-regiões disjuntas, como blocos de linhas, atribuindo cada porção a uma unidade de processamento~\cite{Foster1995,Pacheco2011}.
+
+Essa abordagem estruturada é essencial para evitar condições de corrida: como cada processo ou \textit{thread} possui acesso de escrita exclusivo ao seu respectivo bloco na matriz futura (geração $t+1$) e realiza apenas a leitura da matriz atual (geração $t$), a execução concorrente ocorre de forma segura e sem sobreposição de modificações.
+
+Em arquiteturas de memória compartilhada, essa divisão poderia ser explorada por múltiplas \textit{threads} acessando o mesmo espaço de memória. No interpretador padrão da linguagem Python (CPython), porém, o \ac{GIL} impede que várias \textit{threads} executem código Python ao mesmo tempo, o que constitui um obstáculo ao uso eficiente de processadores com vários núcleos~\cite{Gross2023}. Em tarefas limitadas pelo processador (\textit{CPU-bound}), como o cálculo de cada geração, \textit{threads} não produzem ganho de desempenho real. Uma compilação opcional do interpretador sem o \ac{GIL} passou a existir a partir da versão 3.13~\cite{Gross2023}, mas o Python 3.12, utilizado neste trabalho, mantém a trava. Por isso, a versão paralela emprega processos independentes (\textit{multiprocessing}), cada um com o seu próprio interpretador.
+
+A versão distribuída, por sua vez, segue o paradigma de troca de mensagens: os processos não compartilham memória, o que exige que as dependências de dados sejam satisfeitas por mensagens enviadas pela rede~\cite{Tanenbaum2017}.
+Para calcular o próximo estado das células nas extremidades de um bloco na vizinhança de Moore, o processo necessita da linha vizinha, que pertence a outro nó. Para resolver isso com eficiência, reservam-se células fantasmas (\textit{ghost cells}) ao redor de cada bloco e, a cada iteração, cada par de nós vizinhos troca apenas as bordas estritamente necessárias, procedimento chamado de troca de \textit{halo} (\textit{halo exchange})~\cite{Kjolstad2010}. Na divisão em blocos de linhas, basta transmitir a primeira e a última linha de cada bloco, pois elas já contêm os vizinhos diagonais exigidos pela vizinhança de Moore.
+
+Por fim, a consistência das gerações é mantida por meio de barreiras de sincronização~\cite{Pacheco2011}.
+Essas barreiras atuam como pontos de bloqueio globais, garantindo que nenhum nó inicie o cálculo e a respectiva troca de células fantasmas da geração seguinte sem que todos os processos tenham concluído integralmente a geração atual. Esse padrão de execução corresponde ao modelo \ac{BSP} proposto por \citeonline{Valiant1990}, no qual a computação avança em superpassos (\textit{supersteps}): em cada um, os processadores calculam localmente e trocam mensagens, e uma barreira encerra o superpasso. Na simulação, cada geração corresponde a um superpasso.
 
 \section{Métricas de desempenho}
 
@@ -26,6 +42,20 @@ O \textit{speedup} $S_p$ e a eficiência $E_p$ com $p$ unidades de processamento
     S_p = \frac{T_1}{T_p}, \qquad E_p = \frac{S_p}{p},
 \end{equation}
 
-\noindent em que $T_1$ é o tempo da versão sequencial e $T_p$ o tempo com $p$ \textit{threads} ou processos~\cite{Pacheco2011}.
+\noindent em que $T_1$ é o tempo da versão sequencial e $T_p$ o tempo com $p$ \textit{threads} ou processos~\cite{Pacheco2011,Eijkhout2016}. Neste trabalho, $T_1$ é medido de duas formas: com a versão sequencial original e com a versão refatorada executada por um único processo, de modo a separar o ganho do paralelismo do ganho obtido apenas com as otimizações do código (Seção~\ref{cap:experimentos}).
 
-\todo{Lei de Amdahl~\cite{Amdahl1967} e lei de Gustafson~\cite{Gustafson1988}.}
+A avaliação teórica dessas métricas é guiada por duas leis fundamentais da computação paralela. A Lei de Amdahl~\cite{Amdahl1967} estabelece que existe um limite máximo para o ganho de velocidade (\textit{speedup}) quando o tamanho do problema é fixo. Isso ocorre porque todo programa possui uma parte sequencial que não pode ser dividida. Sendo $f$ a fração paralelizável do tempo de execução sequencial, o \textit{speedup} com $p$ processadores é limitado por
+
+\begin{equation}\label{eq:amdahl}
+    S_p \leq \frac{1}{(1-f) + f/p},
+\end{equation}
+
+\noindent que tende a $1/(1-f)$ quando $p$ cresce~\cite{Eijkhout2016}. Na simulação, a parte que não pode ser dividida inclui a geração da grade inicial, a distribuição das faixas entre os processos e, a cada geração, a soma das contagens de estados que decide a parada. Os custos de sincronização (como a espera nas barreiras) e de comunicação não fazem parte dessa fração, mas somam-se a ela como sobrecarga e reduzem ainda mais o \textit{speedup} observado~\cite{Eijkhout2016}. Logo, simplesmente adicionar mais processadores para resolver o mesmo problema de tamanho fixo trará retornos cada vez menores.
+
+Por outro lado, a Lei de Gustafson~\cite{Gustafson1988} aborda o desempenho em cenários em que o tamanho do problema pode crescer. Ela argumenta que, na prática, ao adicionar mais processadores a um sistema, o objetivo não é resolver o mesmo problema original mais rápido, mas sim resolver um problema consideravelmente maior no mesmo tempo. Sendo $s$ a fração do tempo da execução paralela gasta na parte sequencial, o \textit{speedup} escalado é
+
+\begin{equation}\label{eq:gustafson}
+    S_p = s + (1-s)\,p,
+\end{equation}
+
+\noindent que cresce quase linearmente com $p$ quando $s$ é pequena~\cite{Gustafson1988,Eijkhout2016}. No contexto desta simulação, isso significa aumentar as dimensões da matriz populacional à medida que se utilizam mais processos. Como o cálculo de cada processo cresce com a área da sua faixa, enquanto a comunicação cresce apenas com a sua borda (duas linhas por geração), o peso relativo da comunicação diminui à medida que o problema cresce, permitindo que o sistema mantenha uma alta eficiência.
