@@ -13,10 +13,10 @@ arquivo** (tabela, checklist e histórico) no mesmo PR.
 | Sequencial refatorada | ✅ feita e testada | [`sequencial/fakenews_sequencial.py`](../sequencial/fakenews_sequencial.py) + [`comum/`](../comum/) |
 | Paralela (processos e threads) | ✅ feita e testada | [`paralelo/fakenews_paralelo.py`](../paralelo/fakenews_paralelo.py) |
 | Distribuída (sockets TCP) | ✅ feita e testada (localhost, interface de rede real e 3 máquinas) | [`distribuido/`](../distribuido/) |
-| Testes | ✅ 76 testes passando (Linux; 72 no Windows antes da revisão do PR #11): equivalência, protocolo, robustez, melhorias 2 e 3, saída, métricas, bateria | [`testes/`](../testes/) |
+| Testes | ✅ 76 testes passando na `main` (Linux, Python 3.12 e 3.14; o Windows rodou 72, antes da revisão do PR #11): equivalência, protocolo, robustez, melhorias 2 e 3, saída, métricas, bateria | [`testes/`](../testes/) |
 | 6 melhorias | ✅ implementadas · ✅ medidas · ❌ não escritas no relatório | [seção 5](#5-melhorias-escolhidas) |
-| Experimentos de desempenho | ✅ medidos numa máquina (localhost) · 🔄 3 máquinas: conexão ok, falta medir | [`experimentos/`](../experimentos/) |
-| Relatório (Overleaf) | 🔄 fundamentação e seção 3 (sequencial) escritas; o resto tem `\todo` | [`relatorio/`](../relatorio/) (cópia) |
+| Experimentos de desempenho | ✅ medidos no PC do grupo (Windows) e num notebook (Linux), em localhost · 🔄 3 máquinas: conexão ok, falta medir · 🔄 bateria de percentual × limiar: refazer com 5 repetições | [`experimentos/`](../experimentos/) |
+| Relatório (Overleaf) | 🔄 fundamentação, sequencial e paralela escritas; experimentos com ambiente e comparação entre máquinas; distribuída, melhorias, introdução e conclusão com `\todo` | [`relatorio/`](../relatorio/) (cópia) |
 | Slides (PDF) | ❌ não começados | — |
 | Vídeo 10–15 min | ❌ não gravado | — |
 | ZIP final | ❌ | — |
@@ -129,12 +129,15 @@ onde cada um marca as suas tarefas.
      robustez): integrado na `feat/implementacoes-codigo` em 23 nov.;
    - [x] PR [#5](https://github.com/vinicius-10/FakeNews-Distribuidos/pull/5) de
      `feat/implementacoes-codigo` para a `main` (leva o PR #4): aprovado e integrado em 23 nov.;
-   - [x] PRs #6 a #9 (roteiro das 3 máquinas, scripts de rede, testes completos e custo da
-     sequencial) integrados em 23 nov.;
+   - [x] PRs #6 a #11 (roteiro das 3 máquinas, scripts de rede, testes completos, custo da
+     sequencial, medições no Linux e bateria de percentual × limiar) integrados em 23 nov.;
    - [ ] apagar as branches já integradas que ficaram no GitHub (`docs/andamento-3-maquinas`,
-     `docs/guia-contribuicao`, `docs/referencias`, `feat/experimentos-custo-sequencial`,
+     `docs/andamento-verificacao`, `docs/guia-contribuicao`, `docs/referencias`,
+     `feat/bateria-parametros`, `feat/experimentos-custo-sequencial`,
      `feat/experimentos-e-robustez`, `feat/implementacoes-codigo`, `fix/scripts-rede-notebooks`,
-     `test/completar-testes`).
+     `test/completar-testes`);
+   - [ ] daqui em diante, registrar a aprovação no GitHub antes do merge (os PRs #10 e #11
+     entraram sem aprovação registrada; o CONTRIBUTING pede 1).
 2. [x] **Script de experimentos** em Python ([`experimentos/`](../experimentos/README.md)):
    `medir.py` (baterias), `analisar.py` (métricas, tabelas e gráficos), `perfis.py` (tempo por
    *worker*) e `modelo.py` (melhorias do modelo).
@@ -192,19 +195,35 @@ onde cada um marca as suas tarefas.
      eficiência caindo acima de 8 *workers* (núcleos P/E) e speedup superlinear com 2 *workers*
      (cache);
    - [ ] texto das análises no relatório (item 7).
-7. [ ] **Relatório no Overleaf**. `\todo` pendentes (cópia de 23 nov., commit `139cd2b`):
-   introdução 1 · paralela 4 · distribuída 5 · melhorias 5 (faltam as 6 subseções) ·
-   experimentos 13 · conclusão 6 · apêndice de execução 2. Fundamentação e seção 3 (sequencial:
-   funcionamento com fluxograma e exemplo passo a passo, e análise de custo) estão completas. No capítulo de experimentos (ou no
-   apêndice), um parágrafo sobre a verificação: os 56 testes, o que cada grupo cobre e a
-   conferência por SHA-256 nas baterias; no da distribuída, o descarte de conexões que não são
-   *workers*, os *timeouts* e o que o `tempo_total` mede. No capítulo de experimentos: preencher
-   a tabela de ambiente (`tab:ambiente`), descrever os cenários e as repetições, e colocar as
-   tabelas, os gráficos e as análises dos itens 5 e 6 (hoje só a fundamentação tem as fórmulas
-   de *speedup*, eficiência, Amdahl e Gustafson). Na conclusão, a tabela de contribuições com os
-   quatro integrantes; no apêndice, o registro do uso de IA. Cada seção é revisada por quem fez
-   aquela parte do código.
-8. [ ] **Referências** das melhorias 2 e 3 e do uso de IA (o enunciado exige citar).
+7. [ ] **Relatório no Overleaf**. Situação em 23 nov. (cópia `a04a424` + Overleaf ao vivo):
+   - [x] fundamentação; seção 3 (sequencial: funcionamento, exemplo passo a passo e custo);
+     seção da paralela (estratégia, fluxo, divisão, memória, sincronização e verificação,
+     conferida contra o código);
+   - [x] experimentos: tabela de ambiente com as duas máquinas e seção "Comparação entre as
+     duas máquinas" (`tab:comparacao-maquinas`, Windows × Linux, cada uma contra a própria
+     sequencial);
+   - [ ] experimentos (7 `\todo`): cenários e repetições; resultados da paralela e da
+     distribuída (tabelas e gráficos do PC do grupo); as quatro análises (gargalos,
+     sincronização, custo de comunicação, limitações) com os números do item 6; um parágrafo
+     sobre a verificação (os 76 testes, o que cada grupo cobre e a conferência por SHA-256);
+   - [ ] distribuída (5 `\todo`): arquitetura, divisão, protocolo, sincronização e verificação,
+     incluindo o descarte de conexões que não são *workers*, os *timeouts* e o que o
+     `tempo_total` mede;
+   - [ ] melhorias (5 `\todo`): as 6 subseções, cada uma com motivação, implementação,
+     referência e resultado;
+   - [ ] introdução (1), conclusão (6, com a tabela de contribuições dos quatro integrantes) e
+     apêndice de execução (2, com o registro do uso de IA).
+   Cada seção é revisada por quem fez aquela parte do código.
+8. [ ] **Referências** (o enunciado exige citar). Faltam no `main.bib` (as entradas existentes
+   ficam como estão):
+   - [ ] artigos das melhorias que estão em [`final.md`](final.md): Jin et al. (2013), Amaral e
+     Arenzon (2018), Shao et al. (2018) e Giordano et al. (2019); e, para a análise, Millán et al.
+     (2015) e Hoefler e Belli (2015), se forem citados;
+   - [ ] melhorias 2 (estatísticas) e 3 (visualização): ainda sem referência;
+   - [ ] bibliotecas: documentação do Python (`multiprocessing`, `shared_memory`, `socket`) e o
+     `matplotlib` (usado só nos gráficos dos experimentos);
+   - [ ] uso de IA: Claude (Anthropic), usado no código, nos experimentos e nos textos, e
+     DeepSeek, usado no PR #11.
 9. [ ] **Slides** em PDF:
    - [ ] todos os tópicos do enunciado: problema, modelo, sequencial, paralela e distribuída,
      divisão da matriz, tabelas e gráficos, *speedup* e eficiência, dificuldades, melhorias,
@@ -304,3 +323,10 @@ onde cada um marca as suas tarefas.
   aponta 43 de 54 configurações acima de 1,10. "Variar gerações" voltou para pendente (as baterias
   usaram 20 gerações). O `cenarios.json` é só a lista dos cenários; nenhum script o lê. Suíte com
   76 testes (Linux, Python 3.12.16).
+- **23 nov. 2026**: revisão da `main` depois dos PRs #10 e #11 (`a9bf8f8`). 76 testes OK no Linux
+  (Python 3.12 e 3.14). Código conferido contra as restrições: sem bibliotecas proibidas no
+  cálculo, `spawn` explícito, *timeout* em toda espera, sem `SO_REUSEADDR`, `encoding` em todo
+  `open`, original do professor intacto. README e CONTRIBUTING corrigidos (76 testes, estrutura
+  com `bateria.py`, `custo_sequencial.py`, `modelo.py`, `distribuido/rede/` e `docs/`). Seção da
+  paralela do relatório conferida contra o código. Faltam no `main.bib` as referências das
+  melhorias, das bibliotecas e do uso de IA.
