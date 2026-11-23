@@ -2,18 +2,191 @@
 
 \chapter{Versão paralela}\label{cap:paralela}
 
-\section{Estratégia de paralelização}
+Esta seção descreve a versão paralela da simulação, implementada no arquivo \texttt{paralelo/fakenews\_paralelo.py}. Ela usa o mesmo núcleo de cálculo da versão sequencial refatorada (Seção~\ref{sub:sequencial-refatorada}): a regra de transição, a grade inicial e o formato da saída são os mesmos, e muda apenas quem calcula cada linha da grade. A Seção~\ref{sec:estrategia-paralela} apresenta o mecanismo de paralelismo escolhido; a Seção~\ref{sec:fluxo-paralela}, o fluxo de execução; a Seção~\ref{sec:divisao-paralela}, a divisão da matriz e o tratamento das fronteiras entre as partes; a Seção~\ref{sec:memoria-paralela}, a organização da memória; a Seção~\ref{sec:sincronizacao-paralela}, a sincronização entre as gerações; e a Seção~\ref{sec:verificacao-paralela}, a verificação de que o resultado é igual ao da versão sequencial.
 
-\todo{Linguagem e mecanismo escolhidos (\textit{threads} em Java ou \texttt{multiprocessing} em Python) e justificativa (GIL).}
+\section{Estratégia de paralelização}\label{sec:estrategia-paralela}
 
-\section{Divisão da matriz}
+A versão paralela foi implementada em Python~3.12 com o módulo \texttt{multiprocessing} da biblioteca padrão, usando processos em vez de \textit{threads}. Como discutido na Seção~\ref{sec:computacao-paralela}, o \ac{GIL} impede que \textit{threads} executem código Python ao mesmo tempo, e o cálculo de uma geração é limitado pelo processador; com processos, cada um tem o seu próprio interpretador e pode ocupar um núcleo inteiro. O programa também oferece o modo \textit{threads} (opção \texttt{-{}-modo threads}), que executa exatamente o mesmo laço com \textit{threads}. Esse modo não tem o objetivo de ganhar desempenho, e sim o de medir o efeito do \ac{GIL} (Seção~\ref{cap:experimentos}).
 
-\todo{Decomposição por blocos de linhas; figura mostrando a divisão entre \textit{threads}; tratamento de divisão não exata.}
+A execução envolve dois papéis. O processo principal gera o estado inicial, cria as estruturas compartilhadas e os demais processos, soma as contagens de estados a cada geração, imprime o andamento e decide quando a simulação termina. Os $p$ processos de trabalho, chamados de \textit{workers}, calculam cada um a sua parte da grade; o seu número é definido pela opção \texttt{-{}-trabalhadores} e, por padrão, é igual ao número de núcleos lógicos da máquina. Os processos são criados pelo método \textit{spawn}, escolhido explicitamente para que o programa se comporte da mesma forma no Windows e no Linux. Os demais parâmetros de linha de comando são os mesmos da versão sequencial.
 
-\section{Sincronização e consistência entre gerações}
+\section{Fluxo de execução}\label{sec:fluxo-paralela}
 
-\todo{Leitura da geração $t$ compartilhada (somente leitura), escrita exclusiva de cada \textit{thread} nas suas linhas da geração $t+1$; barreira ao fim de cada geração; redução da contagem de estados; por que não há condição de corrida.}
+A Figura~\ref{fig:fluxograma-paralela} mostra o fluxo de execução, com o processo principal à esquerda e um \textit{worker} à direita; os $p$ \textit{workers} executam o mesmo fluxo, cada um sobre a sua parte da grade. As linhas horizontais grossas representam as barreiras, pontos em que cada processo só prossegue depois que todos os $p+1$ processos chegaram.
 
-\section{Verificação de correção}
+\begin{figure}[!htb]
+    \caption{Fluxograma da versão paralela}
+    \label{fig:fluxograma-paralela}
+    \centering
+    \begin{tikzpicture}[x=1cm, y=1cm, font=\footnotesize,
+            etapa/.style={draw, align=center, minimum width=5.4cm, minimum height=0.8cm},
+            extremo/.style={draw, rounded corners=0.35cm, minimum width=2.2cm, minimum height=0.7cm},
+            barreira/.style={line width=2.2pt}]
+        %% Raias
+        \node[font=\small\bfseries] at (0, 0.9) {Processo principal};
+        \node[font=\small\bfseries] at (7.4, 0.9) {\textit{Worker} $k$ ($k = 0, \dots, p-1$)};
+        %% Principal: preparação
+        \node[extremo] (inicio) at (0, 0) {Início};
+        \node[etapa] (estado) at (0, -1.2) {Gerar a grade inicial (semente 42),\\contar e imprimir o estado inicial};
+        \node[etapa] (faixas) at (0, -2.5) {Dividir as linhas em $p$ faixas\\(\texttt{dividir\_em\_faixas})};
+        \node[etapa] (criar) at (0, -3.8) {Criar a memória compartilhada,\\a barreira e os $p$ \textit{workers}};
+        %% Worker: preparação
+        \node[extremo] (winicio) at (7.4, -3.8) {Início};
+        \node[etapa] (conectar) at (7.4, -5.0) {Conectar-se aos blocos\\de memória compartilhada};
+        \draw[->, dashed] (criar) -- node[above] {cria} (winicio);
+        %% Barreira de largada
+        \draw[barreira] (-2.9, -6.1) -- (10.3, -6.1);
+        \node[fill=white, inner sep=1pt] at (3.7, -6.1) {largada};
+        \draw[->] (criar) -- (0, -6.1);
+        \draw[->] (winicio) -- (conectar);
+        \draw[->] (conectar) -- (7.4, -6.1);
+        %% Antes do laço
+        \node[etapa] (relogio) at (0, -7.0) {Iniciar a medição de tempo};
+        \node[etapa] (janela) at (7.4, -7.1) {Copiar a janela local:\\faixa + uma linha vizinha de cada lado};
+        \draw[->] (0, -6.1) -- (relogio);
+        \draw[->] (7.4, -6.1) -- (janela);
+        %% Laço do worker
+        \node[etapa] (halo) at (7.4, -8.5) {Recarregar as duas linhas vizinhas\\(a partir da 2.ª geração)};
+        \node[etapa] (calcular) at (7.4, -9.9) {Calcular e contar a faixa na janela\\(\texttt{calcular\_faixa}, \texttt{contar\_faixa})};
+        \node[etapa] (devolver) at (7.4, -11.3) {Devolver as linhas próprias\\à grade compartilhada};
+        \draw[->] (janela) -- (halo);
+        \draw[->] (halo) -- (calcular);
+        \draw[->] (calcular) -- (devolver);
+        %% Barreira A
+        \draw[barreira] (-2.9, -12.4) -- (10.3, -12.4);
+        \node[fill=white, inner sep=1pt] at (3.7, -12.4) {barreira A};
+        \draw[->] (relogio) -- (0, -12.4);
+        \draw[->] (devolver) -- (7.4, -12.4);
+        %% Entre A e B
+        \node[etapa] (somar) at (0, -13.6) {Somar as contagens, imprimir a\\geração e decidir se continua};
+        \node[etapa, dashed] (aguardar) at (7.4, -13.6) {Aguardar a decisão};
+        \draw[->] (0, -12.4) -- (somar);
+        \draw[->] (7.4, -12.4) -- (aguardar);
+        %% Barreira B
+        \draw[barreira] (-2.9, -14.8) -- (10.3, -14.8);
+        \node[fill=white, inner sep=1pt] at (3.7, -14.8) {barreira B};
+        \draw[->] (somar) -- (0, -14.8);
+        \draw[->] (aguardar) -- (7.4, -14.8);
+        %% Decisões (losangos desenhados com caminho próprio, sem biblioteca do TikZ)
+        \draw (0, -15.4) -- (2.6, -16.3) -- (0, -17.2) -- (-2.6, -16.3) -- cycle;
+        \node[align=center] at (0, -16.3) {Há espalhadores\\e restam gerações?};
+        \draw (7.4, -15.4) -- (9.6, -16.3) -- (7.4, -17.2) -- (5.2, -16.3) -- cycle;
+        \node[align=center] at (7.4, -16.3) {\texttt{continuar}\\vale 1?};
+        \draw[->] (0, -14.8) -- (0, -15.4);
+        \draw[->] (7.4, -14.8) -- (7.4, -15.4);
+        \draw[->] (-2.6, -16.3) -- node[above] {sim} (-3.3, -16.3) |- (0, -11.9);
+        \draw[->] (9.6, -16.3) -- node[above] {sim} (10.7, -16.3) |- (halo.east);
+        %% Encerramento
+        \node[etapa] (final) at (0, -18.5) {Recolher os tempos dos \textit{workers},\\copiar a grade final e liberar a memória};
+        \node[etapa] (wfinal) at (7.4, -18.5) {Enviar os tempos pela fila\\e fechar os blocos};
+        \draw[->] (0, -17.2) -- node[right] {não} (final);
+        \draw[->] (7.4, -17.2) -- node[right] {não} (wfinal);
+        \draw[->, dashed] (wfinal) -- node[above] {tempos} (final);
+        \node[extremo] (fim) at (0, -19.8) {Fim};
+        \node[extremo] (wfim) at (7.4, -19.8) {Fim};
+        \draw[->] (final) -- (fim);
+        \draw[->] (wfinal) -- (wfim);
+    \end{tikzpicture}
+    \fonte{}
+    \addcontentsline{loge}{figure}{\protect\numberline{\thefigure}Fluxograma da versão paralela}
+\end{figure}
 
-\todo{Comparação célula a célula com a versão sequencial.}
+O estado inicial é gerado uma única vez, pelo processo principal, com a mesma função e a mesma semente da versão sequencial; nenhum \textit{worker} sorteia valores, o que garante que todas as versões partam da mesma grade. Depois de criar a memória compartilhada e os processos, o principal espera todos os \textit{workers} na barreira de largada e só então inicia a medição de tempo, de modo que o tempo do laço não inclui a criação dos processos. A cada geração, os \textit{workers} calculam as suas faixas e se encontram com o principal em duas barreiras, A e B, entre as quais o principal soma as contagens e decide se a simulação continua (Seção~\ref{sec:sincronizacao-paralela}). Ao final, cada \textit{worker} envia ao principal, por uma fila (\texttt{multiprocessing.Queue}), os seus tempos de cálculo e de espera, usados no perfil de tempo dos experimentos, e o principal copia a grade final e libera a memória compartilhada.
+
+\section{Divisão da matriz}\label{sec:divisao-paralela}
+
+A grade é dividida em faixas horizontais de linhas contíguas, uma por \textit{worker}, pela função \texttt{dividir\_em\_faixas} do arquivo \texttt{comum/modelo.py}. Com $L$ linhas e $p$ \textit{workers}, o \textit{worker} $k$ ($k = 0, \dots, p-1$) recebe as linhas de $\lfloor kL/p \rfloor$ até $\lfloor (k+1)L/p \rfloor - 1$. Quando $L$ não é múltiplo de $p$, essa fórmula espalha as linhas excedentes entre as faixas, cujos tamanhos diferem em no máximo uma linha: com 10~linhas e 3~\textit{workers}, por exemplo, as faixas têm 3, 3 e 4~linhas, como mostra a Figura~\ref{fig:faixas-paralela}. Se houver mais \textit{workers} que linhas, alguns recebem uma faixa vazia e apenas participam das barreiras.
+
+\begin{figure}[!htb]
+    \caption{Divisão de uma grade de 10 linhas entre 3 \textit{workers} e janela local do \textit{worker} 1}
+    \label{fig:faixas-paralela}
+    \centering
+    \begin{tikzpicture}[x=0.4cm, y=0.4cm, font=\scriptsize]
+        %% Grade compartilhada: linha 0 e 11 do vetor são a moldura; linhas reais 0 a 9
+        \fill[black!12] (0, 0) rectangle (6, -1);
+        \fill[blue!20] (0, -1) rectangle (6, -4);
+        \fill[orange!35] (0, -4) rectangle (6, -7);
+        \fill[green!25] (0, -7) rectangle (6, -11);
+        \fill[black!12] (0, -11) rectangle (6, -12);
+        \draw[black!40, step=0.4cm] (0, -12) grid (6, 0);
+        \draw[thick] (0, 0) rectangle (6, -12);
+        \foreach \y in {-1, -4, -7, -11} {\draw[thick] (0, \y) -- (6, \y);}
+        \foreach \r in {0, ..., 9} {\node[anchor=east, font=\tiny] at (-0.1, -\r - 1.5) {\r};}
+        \node[anchor=east] at (-1.2, -0.5) {moldura (zeros)};
+        \node[anchor=east] at (-1.2, -2.5) {\textit{worker} 0: linhas 0 a 2};
+        \node[anchor=east] at (-1.2, -5.5) {\textit{worker} 1: linhas 3 a 5};
+        \node[anchor=east] at (-1.2, -9.0) {\textit{worker} 2: linhas 6 a 9};
+        \node[anchor=east] at (-1.2, -11.5) {moldura (zeros)};
+        \node[font=\footnotesize] at (3, 1) {Grade compartilhada};
+        %% Janela local do worker 1: halo (linha 2), linhas próprias (3 a 5), halo (linha 6)
+        \fill[blue!20] (15, -3) rectangle (21, -4);
+        \fill[orange!35] (15, -4) rectangle (21, -7);
+        \fill[green!25] (15, -7) rectangle (21, -8);
+        \draw[black!40, step=0.4cm] (15, -8) grid (21, -3);
+        \draw[thick] (15, -4) rectangle (21, -7);
+        \draw[thick, dashed] (15, -3) rectangle (21, -4);
+        \draw[thick, dashed] (15, -7) rectangle (21, -8);
+        \node[anchor=west] at (21.3, -3.5) {linha 2 (\textit{halo})};
+        \node[anchor=west] at (21.3, -5.5) {linhas 3 a 5 (próprias)};
+        \node[anchor=west] at (21.3, -7.5) {linha 6 (\textit{halo})};
+        \node[font=\footnotesize] at (18, -1.6) {Janela local do \textit{worker} 1};
+        \node at (18, -9) {$2 \times (h+2) \cdot C$ bytes};
+        %% Cópias entre a grade compartilhada e a janela
+        \draw[->, thick] (6.2, -3.5) -- node[above] {copiada da geração $t$} (14.8, -3.5);
+        \draw[->, thick] (14.8, -5.5) -- node[above] {devolvidas à geração $t+1$} (6.2, -5.5);
+        \draw[->, thick] (6.2, -7.5) -- node[below] {copiada da geração $t$} (14.8, -7.5);
+    \end{tikzpicture}
+    \fonte{}
+    \addcontentsline{loge}{figure}{\protect\numberline{\thefigure}Divisão de uma grade de 10 linhas entre 3 \textit{workers} e janela local do \textit{worker} 1}
+\end{figure}
+
+Optou-se pela divisão em faixas de linhas, e não em blocos bidimensionais, porque a grade é armazenada linha após linha (Seção~\ref{sub:sequencial-refatorada}): cada faixa, assim como cada linha vizinha de que ela depende, ocupa um trecho contíguo do vetor, que pode ser copiado de uma só vez, e cada faixa tem no máximo duas fronteiras com outras faixas. A decomposição em blocos diminuiria a fronteira de cada parte em relação à sua área~\cite{Foster1995}, mas exigiria copiar colunas, que não são contíguas no vetor, e trocar dados com até oito vizinhos.
+
+\subsection{Fronteiras e leitura das linhas vizinhas}\label{sub:halo-paralela}
+
+Pela vizinhança de Moore, as células da primeira e da última linha de uma faixa dependem de linhas que pertencem a outras faixas: o \textit{worker}~$k$ precisa da última linha do \textit{worker}~$k-1$ e da primeira linha do \textit{worker}~$k+1$. As demais fronteiras são as da própria grade. Em cima e embaixo, a moldura de zeros faz o papel da borda fixa, pois zero representa o estado ignorante, que não conta como espalhador; por isso, o \textit{worker}~0 encontra a moldura no lugar da linha de cima, e o último \textit{worker}, no lugar da linha de baixo. Nas laterais, o teste do índice da coluna em \texttt{calcular\_faixa} descarta os vizinhos fora da grade, como no código original.
+
+Como a grade está em memória compartilhada, as linhas vizinhas não precisam ser enviadas por mensagem: cada \textit{worker} as copia diretamente da grade da geração atual. Como mostra a Figura~\ref{fig:faixas-paralela}, o \textit{worker} calcula numa janela local formada pelas linhas da sua faixa e por uma linha vizinha de cada lado, o \textit{halo} (Seção~\ref{sec:computacao-paralela}). Na primeira geração, a janela inteira é copiada; nas seguintes, apenas as duas linhas de \textit{halo} são recarregadas, porque as linhas próprias já estão na janela, calculadas pelo próprio \textit{worker} na geração anterior. Terminado o cálculo, o \textit{worker} devolve à grade compartilhada da geração seguinte apenas as suas linhas, que serão as linhas de \textit{halo} dos seus vizinhos.
+
+Essa leitura é segura porque as linhas copiadas foram escritas pelos vizinhos antes da barreira~A da geração anterior, e a grade que está sendo lida só volta a ser escrita depois que todos os processos passam pelas barreiras da geração atual (Seção~\ref{sec:sincronizacao-paralela}). O procedimento corresponde à troca de \textit{halo} da versão distribuída (Seção~\ref{cap:distribuida}), com uma cópia de memória no lugar de uma mensagem pela rede.
+
+\section{Gerenciamento de memória}\label{sec:memoria-paralela}
+
+Processos não compartilham memória por padrão (Seção~\ref{sec:computacao-paralela}). Para que todos acessem a mesma grade sem copiá-la para cada processo, o processo principal cria dois blocos de memória compartilhada (\texttt{multiprocessing.shared\_memory}), cada um com os $(L+2) \cdot C$ bytes da grade com moldura: um com a geração atual, preenchido com a grade inicial, e outro para a próxima geração, inicialmente zerado. Os \textit{workers} se conectam aos blocos pelo nome e passam a enxergar os mesmos bytes. Para calcular a geração $t+1$, lê-se o bloco de índice $t \bmod 2$ e escreve-se no outro; assim, os dois blocos trocam de papel a cada geração sem nenhuma cópia, o que corresponde ao \textit{double buffering} da Seção~\ref{sec:automatos-celulares}. No Windows, o sistema pode reservar um bloco maior que o pedido, arredondado para o tamanho de página; por isso, os blocos são sempre acessados por uma \textit{view} cortada no tamanho exato da grade.
+
+Além das grades, são compartilhadas duas estruturas pequenas: o vetor \texttt{contagens}, com quatro inteiros por \textit{worker}, que guardam a quantidade de células de cada estado na sua faixa (incluindo os \textit{bots}, Seção~\ref{cap:melhorias}), e o indicador \texttt{continuar}, de um byte, com a decisão do principal. Ambos são criados sem \textit{lock}, pelo motivo explicado na Seção~\ref{sec:sincronizacao-paralela}. Quando a melhoria de resistência individual está ligada, os limiares das células ficam num terceiro bloco compartilhado, que só é lido: cada \textit{worker} copia dele, uma única vez, o trecho correspondente à sua janela.
+
+O cálculo não é feito diretamente sobre os blocos compartilhados, e sim sobre a janela local descrita na Seção~\ref{sub:halo-paralela}: dois vetores do tipo \texttt{bytearray} de $(h+2) \cdot C$ bytes, em que $h$ é o número de linhas da faixa, alternados entre as gerações da mesma forma que os blocos compartilhados. Essa escolha foi motivada por medição. O acesso célula a célula à \textit{view} da memória compartilhada é mais lento que o acesso a um \texttt{bytearray}, e a primeira implementação, que calculava diretamente sobre os blocos, ficava mais lenta que a versão sequencial mesmo com um único \textit{worker}. As duas implementações foram comparadas com um único \textit{worker}, 20~gerações, 5\% de espalhadores e limiar~2, num processador Intel Core i7-13650HX, com Windows~11 e Python~3.12.10, tomando a mediana de cinco repetições após uma execução de aquecimento descartada. Com a janela local, o tempo do laço caiu de 5,61~s para 4,88~s na grade de $1000 \times 1000$ e de 24,11~s para 19,78~s na de $2000 \times 2000$; em relação à versão sequencial refatorada (4,62~s e 18,70~s), o \textit{speedup} com um \textit{worker} passou de 0,82 e 0,78 para 0,95 nas duas grades, e as três versões produziram a mesma grade final. A comunicação entre os processos continua sendo feita pela memória compartilhada; a janela muda apenas a estrutura sobre a qual o laço de cálculo trabalha, ao custo de copiar duas linhas e devolver $h$ linhas por geração.
+
+Com essa organização, as grades ocupam, durante o laço, $2(L+2)C$ bytes nos blocos compartilhados e $\sum_k 2(h_k+2)C = 2(L+2p)C$ bytes nas janelas, isto é, aproximadamente $4LC$ bytes. Numa grade de $1000 \times 1000$ com 8~\textit{workers}, por exemplo, são 2,004~MB nos blocos e 2,032~MB nas janelas, cerca de 4~MB no total. Ao final, cada \textit{worker} libera as suas \textit{views} e fecha os blocos, e somente o processo principal os remove do sistema (\texttt{unlink}), num trecho executado mesmo quando a simulação termina com erro, para que nenhum bloco permaneça alocado depois do fim do programa.
+
+\section{Sincronização e consistência entre gerações}\label{sec:sincronizacao-paralela}
+
+A sincronização segue o modelo \ac{BSP} (Seção~\ref{sec:computacao-paralela}), em que cada geração corresponde a um superpasso. É usada uma única barreira (\texttt{multiprocessing.Barrier}) com $p+1$ participantes, pois o processo principal também participa dela. Depois da largada, cada geração passa duas vezes pela barreira:
+
+\begin{enumerate}
+    \item \textbf{barreira A}: cada \textit{worker} chega depois de calcular a sua faixa, gravar a sua contagem e devolver as suas linhas à grade compartilhada; quando a barreira é liberada, a nova geração está completa;
+    \item \textbf{entre A e B}: enquanto os \textit{workers} esperam, o principal soma as contagens de todas as faixas (redução), imprime a geração, lê a grade quando a animação ou as estatísticas estão ligadas e grava em \texttt{continuar} se ainda há espalhadores e gerações a executar;
+    \item \textbf{barreira B}: libera os \textit{workers}, que leem \texttt{continuar} e, se for o caso, iniciam a geração seguinte com os papéis das grades trocados.
+\end{enumerate}
+
+São necessárias duas barreiras por geração porque a decisão de parar depende da soma de todas as faixas, que nenhum \textit{worker} conhece sozinho. Com uma só barreira, um \textit{worker} poderia ler \texttt{continuar} antes de o principal tomar a decisão da geração, ou sobrescrever a sua contagem com a da geração seguinte enquanto o principal ainda soma as da geração atual.
+
+Não há condição de corrida porque, em cada fase, toda posição de memória tem no máximo um escritor e não é lida enquanto é escrita. Durante o cálculo, a grade da geração atual só é lida; cada \textit{worker} escreve apenas as suas linhas na grade da próxima geração e apenas as suas quatro posições de \texttt{contagens}; o principal só lê as contagens e a grade depois da barreira~A; e \texttt{continuar} é escrito apenas pelo principal, entre A e B, e lido pelos \textit{workers} somente depois de B. Por isso, nenhuma dessas estruturas precisa de \textit{lock}: a ordem entre escritas e leituras é garantida pelas barreiras. Também não há \textit{deadlock}, pois todos os $p+1$ processos passam pela barreira o mesmo número de vezes e saem do laço pela mesma decisão, lida por todos depois de B.
+
+O custo dessa sincronização aparece como espera nas barreiras: em cada geração, os \textit{workers} que terminam antes aguardam o mais lento, efeito do desbalanceamento de carga discutido na Seção~\ref{sec:computacao-paralela} e medido na Seção~\ref{cap:experimentos}.
+
+\section{Verificação de correção}\label{sec:verificacao-paralela}
+
+Como a regra de transição é determinística e o estado inicial é gerado uma única vez, a versão paralela deve produzir exatamente as mesmas grades que o código original, geração a geração. Isso é verificado pelos testes automatizados da classe \texttt{TestParalela}, no arquivo \texttt{testes/test\_equivalencia.py}, que comparam célula a célula a grade de cada geração com a do código original nos seguintes casos:
+
+\begin{itemize}
+    \item com 1, 2, 3 e 7~processos, em três cenários: grade de $23 \times 17$ com limiar~2, em que as linhas não se dividem igualmente entre os processos; grade de $12 \times 30$ com limiar~3, em que a propagação termina antes do número de gerações pedido; e grade de $9 \times 1$, com uma única coluna;
+    \item com mais processos que linhas (4~linhas e 6~processos);
+    \item no modo \textit{threads}, com 1 e 3~\textit{threads};
+    \item com as melhorias do modelo ligadas (\textit{bots} e resistência individual), caso em que não há referência no código original e a comparação é feita com a versão sequencial refatorada, já verificada contra ele.
+\end{itemize}
+
+Os testes foram executados no Windows e no Linux, com o mesmo resultado. Os experimentos da Seção~\ref{cap:experimentos} reforçam a verificação em escala: em todas as execuções, nas grades de $1000 \times 1000$ e $2000 \times 2000$, o resumo criptográfico (SHA-256) da grade final da versão paralela foi igual ao das demais versões.
+
+A versão distribuída, apresentada a seguir, mantém a mesma divisão em faixas, mas substitui a memória compartilhada pela troca de mensagens entre processos que podem estar em máquinas diferentes.
