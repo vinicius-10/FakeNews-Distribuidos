@@ -18,6 +18,8 @@ Uso (entre máquinas): python -m distribuido.coordenador --host 0.0.0.0 --worker
 e, em cada máquina:   python -m distribuido.worker --coordenador IP:5000 --escutar 0.0.0.0
 """
 
+from contextlib import contextmanager
+import struct
 import time
 
 from comum import modelo
@@ -26,6 +28,20 @@ from comum.parametros import novo_parser, parametros_de_argumentos, preparar_est
 from comum.saida import imprimir_cabecalho, imprimir_geracao, imprimir_grade, imprimir_resultado
 from comum.visualizacao import Animacao
 from distribuido import protocolo as p
+
+
+@contextmanager
+def _contexto(operacao, **detalhes):
+    """Envolve uma operação e, se falhar, adiciona contexto à mensagem de erro."""
+    try:
+        yield
+    except (ConnectionError, p.ErroProtocolo, OSError, ValueError, struct.error) as erro:
+        partes = [f"durante {operacao}"]
+        for k, v in detalhes.items():
+            partes.append(f"{k}={v}")
+        contexto = " (" + ", ".join(partes) + ")"
+        raise p.ErroProtocolo(
+            f"{type(erro).__name__} {contexto}: {erro}") from erro
 
 
 def validar_workers(parametros, workers):
@@ -58,7 +74,10 @@ def executar_coordenador(parametros, servidor, workers, bits=False, mostrar=True
     contagem = modelo.contar_faixa(grade, colunas, 1, linhas + 1)
     faixas = modelo.dividir_em_faixas(linhas, workers)
     # A grade inteira só é montada a cada geração quando alguém precisa dela.
-    precisa_grade = verificar or animacao is not None or mostrar_grade
+    # `ao_fim_da_geracao` também precisa: sem isso o callback receberia sempre a
+    # grade inicial (as faixas nunca chegam do worker) e o erro seria silencioso.
+    precisa_grade = (verificar or ao_fim_da_geracao is not None
+                     or animacao is not None or mostrar_grade)
 
     if mostrar:
         imprimir_cabecalho("DISTRIBUÍDA", parametros, contagem,
@@ -68,33 +87,45 @@ def executar_coordenador(parametros, servidor, workers, bits=False, mostrar=True
 
     servidor.settimeout(timeout)
     conexoes = []
+    perfis = []
+    if mostrar:
+        print(f"Aguardando {workers} worker(s); cada um é avisado assim que conecta...")
     try:
         # 1. Conexão dos workers; o rank é a ordem de chegada.
         enderecos = []
-        for _ in range(workers):
-            conexao, (host, _) = servidor.accept()
-            p.configurar(conexao, timeout)
-            _, ola = p.receber_json(conexao, p.OLA)
-            conexoes.append(conexao)
-            # O vizinho vai se conectar no IP de onde o worker veio, na porta que ele abriu.
-            enderecos.append((host, ola["porta_halo"]))
+        for rank in range(workers):
+            with _contexto(f"aceitar conexão do worker {rank}"):
+                conexao, (host, _) = servidor.accept()
+                p.configurar(conexao, timeout)
+                _, ola = p.receber_json(conexao, p.OLA)
+                conexoes.append(conexao)
+                # O vizinho vai se conectar no IP de onde o worker veio, na porta que ele abriu.
+                enderecos.append((host, ola["porta_halo"]))
+            # `accept` espera até o timeout (600 s por padrão); avisar a cada
+            # conexão evita a impressão de programa travado quando falta subir
+            # um dos workers.
+            if mostrar:
+                print(f"  worker {rank + 1}/{workers} conectado", flush=True)
 
         # 2. Distribuição das faixas (a grade foi gerada uma vez só, acima).
         for rank, (conexao, (ini, fim)) in enumerate(zip(conexoes, faixas)):
-            p.enviar_json(conexao, p.INICIO, {
-                "rank": rank, "workers": workers, "colunas": colunas, "inicio": ini, "fim": fim,
-                "limiar": parametros.limiar, "geracoes": parametros.geracoes, "bits": bits,
-                "resistencia": limiares is not None, "enviar_faixas": precisa_grade,
-                "vizinho_abaixo": enderecos[rank + 1] if rank + 1 < workers else None,
-            })
-            # +1: a linha real r fica na linha r + 1 do vetor com moldura.
-            p.enviar(conexao, p.GRADE, grade[(ini + 1) * colunas:(fim + 1) * colunas])
-            if limiares is not None:
-                p.enviar(conexao, p.LIMIARES, limiares[(ini + 1) * colunas:(fim + 1) * colunas])
-        for conexao in conexoes:
-            p.receber(conexao, p.PRONTO)
-        for conexao in conexoes:
-            p.enviar(conexao, p.LARGADA)
+            with _contexto(f"distribuir faixa para o worker {rank}", faixa=f"{ini}..{fim}"):
+                p.enviar_json(conexao, p.INICIO, {
+                    "rank": rank, "workers": workers, "colunas": colunas, "inicio": ini, "fim": fim,
+                    "limiar": parametros.limiar, "geracoes": parametros.geracoes, "bits": bits,
+                    "resistencia": limiares is not None, "enviar_faixas": precisa_grade,
+                    "vizinho_abaixo": enderecos[rank + 1] if rank + 1 < workers else None,
+                })
+                # +1: a linha real r fica na linha r + 1 do vetor com moldura.
+                p.enviar(conexao, p.GRADE, grade[(ini + 1) * colunas:(fim + 1) * colunas])
+                if limiares is not None:
+                    p.enviar(conexao, p.LIMIARES, limiares[(ini + 1) * colunas:(fim + 1) * colunas])
+        for rank, conexao in enumerate(conexoes):
+            with _contexto(f"aguardar PRONTO do worker {rank}"):
+                p.receber(conexao, p.PRONTO)
+        for rank, conexao in enumerate(conexoes):
+            with _contexto(f"enviar LARGADA para o worker {rank}"):
+                p.enviar(conexao, p.LARGADA)
 
         # 3. Gerações: redução das contagens e decisão de parada.
         inicio = time.perf_counter()
@@ -102,11 +133,14 @@ def executar_coordenador(parametros, servidor, workers, bits=False, mostrar=True
         for geracao in range(1, parametros.geracoes + 1):
             contagem = [0, 0, 0, 0]
             for rank, conexao in enumerate(conexoes):
-                parcial = p.FORMATO_CONTAGEM.unpack(p.receber(conexao, p.CONTAGEM)[1])
-                contagem = [a + b for a, b in zip(contagem, parcial)]
+                ini, fim = faixas[rank]
+                with _contexto(f"receber CONTAGEM do worker {rank} na geração {geracao}",
+                               faixa=f"{ini}..{fim}"):
+                    parcial = p.FORMATO_CONTAGEM.unpack(p.receber(conexao, p.CONTAGEM)[1])
+                    contagem = [a + b for a, b in zip(contagem, parcial)]
                 if precisa_grade:
-                    ini, fim = faixas[rank]
-                    grade[(ini + 1) * colunas:(fim + 1) * colunas] = p.receber(conexao, p.FAIXA)[1]
+                    with _contexto(f"receber FAIXA do worker {rank} na geração {geracao}", faixa=f"{ini}..{fim}"):
+                        grade[(ini + 1) * colunas:(fim + 1) * colunas] = p.receber(conexao, p.FAIXA)[1]
             geracoes_executadas = geracao
             if mostrar:
                 imprimir_geracao(geracao, contagem)
@@ -120,8 +154,9 @@ def executar_coordenador(parametros, servidor, workers, bits=False, mostrar=True
                 ao_fim_da_geracao(geracao, bytes(grade))
             vivo = contagem[modelo.ESPALHADOR] + contagem[modelo.BOT] > 0
             decisao = b"\x01" if vivo and geracao < parametros.geracoes else b"\x00"
-            for conexao in conexoes:
-                p.enviar(conexao, p.DECISAO, decisao)
+            for rank, conexao in enumerate(conexoes):
+                with _contexto(f"enviar DECISAO ao worker {rank} na geração {geracao}"):
+                    p.enviar(conexao, p.DECISAO, decisao)
             if not vivo:
                 if mostrar:
                     print("\nA propagação terminou: não há mais espalhadores.")
@@ -129,10 +164,11 @@ def executar_coordenador(parametros, servidor, workers, bits=False, mostrar=True
         tempo = time.perf_counter() - inicio
 
         # 4. Grade final e perfil de tempo de cada worker.
-        perfis = []
-        for conexao, (ini, fim) in zip(conexoes, faixas):
-            grade[(ini + 1) * colunas:(fim + 1) * colunas] = p.receber(conexao, p.FAIXA)[1]
-            perfis.append(p.receber_json(conexao, p.RESULTADO)[1])
+        for rank, (conexao, (ini, fim)) in enumerate(zip(conexoes, faixas)):
+            with _contexto(f"receber FAIXA final do worker {rank}", faixa=f"{ini}..{fim}"):
+                grade[(ini + 1) * colunas:(fim + 1) * colunas] = p.receber(conexao, p.FAIXA)[1]
+            with _contexto(f"receber RESULTADO do worker {rank}"):
+                perfis.append(p.receber_json(conexao, p.RESULTADO)[1])
     finally:
         for conexao in conexoes:
             conexao.close()
