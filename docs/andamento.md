@@ -121,7 +121,10 @@ concorrentes (Shao et al., 2024), checadores de fatos (Tambuscio et al., 2015), 
 Esta lista acompanha o [roadmap do grupo](https://claude.ai/artifact/X6U3gNTZ2FdzgZEkaNCkkC),
 onde cada um marca as suas tarefas.
 
-0. [ ] **Confirmar o prazo de entrega e o número do grupo** (o número vai no nome do vídeo).
+0. [x] **Prazo e grupo confirmados:** **Grupo 9**, entrega no Moodle até **segunda-feira, 23 nov.
+   2026, 23:59** (atraso não é aceito). Nome do vídeo: `2026-11-23 - Grupo 09 - FakeNews.mp4`.
+   Integrantes no Moodle: Arthur Henrique Jardim da Cunha Pinto, João Alberto Benaci Torezan,
+   Rafael Munhoz Castro e Vinicius Souza Dias (o `variaveis.tex` do relatório escreve "Benassi").
 1. [x] **Código na `main`**:
    - [x] PR [#3](https://github.com/vinicius-10/FakeNews-Distribuidos/pull/3) (três versões, 6
      melhorias e testes): aprovado e integrado em 23 nov.;
@@ -339,3 +342,4 @@ onde cada um marca as suas tarefas.
   e o quadro do protocolo), as 6 melhorias, a motivação da introdução e 13 referências novas no
   `main.bib`. Compilado sem erros nem citações indefinidas. Ficam 2 `\todo` que dependem da
   medição entre 3 máquinas.
+- **23 nov. 2026, 20:50**: Pessoa 3 confirmou o grupo (9) e o prazo (hoje, 23:59).
