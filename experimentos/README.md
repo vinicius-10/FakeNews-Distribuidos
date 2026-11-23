@@ -45,6 +45,9 @@ python -m experimentos.analisar --csv experimentos/resultados/medicoes_escalabil
 
 # perfil por worker: cálculo x comunicação x espera, e desbalanceamento
 python -m experimentos.perfis
+
+# efeito das melhorias do MODELO (resistência individual e bots), não do desempenho
+python -m experimentos.modelo
 ```
 
 As baterias são divididas porque o código do professor é muito mais lento que as
@@ -123,11 +126,14 @@ experimentos/resultados/
 │                              #   Amdahl e Gustafson de cada configuração
 ├── tabelas.md                 # tabelas prontas para colar no relatório
 ├── perfis.csv / perfis.md     # cálculo x comunicação x espera e desbalanceamento
+├── modelo_geracoes.csv        # melhorias do modelo: contagem por geração e cenário
+├── modelo_resumo.csv / modelo.md  # pico, alcance e duração de cada cenário
 └── graficos/
     ├── speedup.png            # speedup × trabalhadores, um painel por tamanho
     ├── eficiencia.png         # eficiência × trabalhadores
     ├── gil.png                # threads × processos (escala log)
-    └── melhorias.png          # tempo com 1 trabalhador: impacto das melhorias
+    ├── melhorias.png          # tempo com 1 trabalhador: impacto das melhorias
+    └── modelo.png             # espalhadores e inativos por geração, por cenário
 ```
 
 ## Métricas calculadas
