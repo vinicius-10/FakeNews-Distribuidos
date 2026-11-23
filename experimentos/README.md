@@ -38,6 +38,20 @@ python -m experimentos.medir --tamanhos 500 1000 2000 \
 python -m experimentos.medir --tamanhos 1000 2000 --versoes sequencial --repeticoes 7 \
     --saida experimentos/resultados/medicoes_baseline.csv
 
+# 6) BATERIA DE PARÂMETROS: varia percentual de espalhadores e limiar (o que o
+#    medir.py não faz, porque lá esses dois são valor único para a bateria toda).
+#    Cada célula roda aquecimento + repetições e é conferida contra a sequencial.
+python -m experimentos.bateria \
+    --percentuais 0.01 0.05 0.10 0.20 --limiares 1 2 3 \
+    --tamanhos 300 600 --geracoes 20 --workers 1 2 4 --repeticoes 3
+
+# só o plano, sem executar (confere o tamanho da bateria antes de começar)
+python -m experimentos.bateria --simular
+
+# exporta os mesmos cenários para o setup de 3 máquinas
+python -m experimentos.bateria --percentuais 0.05 --limiares 2 --tamanhos 2000 \
+    --repeticoes 3 --exportar-cenarios experimentos/resultados/bateria/cenarios-3-maquinas.json
+
 # analisar (aceita vários CSVs; as baterias são somadas)
 python -m experimentos.analisar --csv experimentos/resultados/medicoes_escalabilidade.csv \
     experimentos/resultados/medicoes_paralela.csv experimentos/resultados/medicoes_gil.csv \
@@ -129,6 +143,72 @@ teste de equivalência em escala, além dos testes de `testes/`.
 | `paralela_threads` | mesmo laço com *threads* — mostra o efeito do **GIL** |
 | `distribuida_local` | coordenador + *workers* por *socket* TCP em `127.0.0.1` |
 | `distribuida_bits` | a distribuída com a melhoria "borda compactada em bits" |
+
+## Bateria de parâmetros (`bateria.py`)
+
+O `medir.py` varia **tamanho, trabalhadores e versão**. `--percentual` e `--limiar`
+entram como valor único, fixo para a bateria toda — o que impede responder "a taxa
+inicial de espalhadores e o limiar mudam o custo de cada versão?".
+
+O `bateria.py` monta o produto cartesiano:
+
+```
+percentuais × limiares × tamanhos × versões × trabalhadores
+```
+
+e, para cada célula, roda aquecimento + repetições. Saídas na pasta `--saida`:
+
+| Arquivo | O que tem |
+|---|---|
+| `medicoes.csv` | uma linha por repetição, **no mesmo formato do `medir.py`** (mesmos campos, então `analisar.py` continua servindo) |
+| `resumo.md` | uma seção por cenário: mediana, desvio, speedup, eficiência, gerações e veredito de equivalência |
+| `ambiente.csv` | configuração da máquina, igual ao `medir.py` |
+| `cenarios.json` | lista dos mesmos cenários (`--exportar-cenarios`), para repetir à mão no teste entre 3 máquinas; nenhum script lê esse arquivo |
+
+**Cuidado que o script resolve:** `analisar.agrupar` agrupa por
+`(versão, tamanho, workers)` e `analisar.verificar_equivalencia` compara hashes por
+tamanho — as duas **ignoram `percentual` e `limiar`**, porque no `medir.py` eles são
+constantes. Rodando a análise no CSV inteiro de uma bateria que varia os dois, a
+mediana misturaria cenários diferentes e a equivalência acusaria divergência falsa
+(percentuais diferentes geram grades diferentes por definição). Por isso o
+`bateria.py` fatia o CSV por cenário antes de chamar essas funções; o
+`testes/test_bateria.py` trava esse comportamento.
+
+**Sobre a referência do speedup:** é a `sequencial` **do mesmo cenário**. Comparar
+versões entre cenários diferentes não faz sentido — o trabalho muda com percentual
+e limiar.
+
+**Por que o trabalho muda com o limiar (medido):** no `comum/modelo.py`, só a
+célula `IGNORANTE` soma os 8 vizinhos (`if estado == IGNORANTE:`); espalhador e
+inativo caem nos ramos baratos. O custo de uma geração depende, então, de
+**quantas células ainda são ignorantes** — não só do tamanho da grade. Numa rodada
+de 600×600 com 1% inicial:
+
+| limiar | ignorantes ao fim | % ignorantes | tempo por geração |
+|---:|---:|---:|---:|
+| 1 | 0 | 0,0% | 0,052 s |
+| 2 | 335.992 | 93,3% | 0,137 s |
+| 3 | 356.417 | 99,0% | 0,136 s |
+
+São **2,6× de diferença no custo por geração** causada só pela composição da
+grade. Consequência prática: não se compara tempo entre limiares, só entre
+versões dentro do mesmo cenário — que é o que o speedup da bateria faz.
+
+**Sobre poucas repetições:** com 1 repetição, um único outlier de agendamento do
+sistema pode fazer a paralela de 1 worker parecer 2× mais rápida que a sequencial
+(já aconteceu no `--rapida`). O padrão é `--repeticoes 5` (mínimo do CONTRIBUTING) e
+o resumo avisa quando a bateria usou menos.
+
+**Conferência do speedup com 1 worker:** com 1 trabalhador não há paralelismo, então
+a paralela (processos) e a distribuída têm de dar speedup entre 0,90 e 1,10 contra a
+sequencial. O `resumo.md` aponta, por cenário, o que sair dessa faixa (as *threads*
+ficam de fora: o GIL as deixa abaixo de 1 de propósito). Na rodada gravada em
+`resultados/bateria/` (Windows, 3 repetições), **43 de 54** configurações com 1
+worker (paralela e distribuída) ficaram acima de 1,10, até 1,35: a sequencial e as *threads*, que rodam no
+processo principal da bateria, saíram de 10% a 25% mais lentas que as versões que
+rodam num processo novo. Na bateria do `medir.py` isso não aparece (1000², 1 worker:
+0,99 no Windows; 0,95 no Linux). Até a causa ser explicada, use o speedup da bateria
+só para comparar versões paralelas entre si, não contra a sequencial.
 
 ## Arquivos gerados
 
