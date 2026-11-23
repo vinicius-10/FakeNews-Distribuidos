@@ -200,6 +200,11 @@ def montar_resumo(resumo, tamanhos):
             if ("sequencial", t, 1) in resumo}
     professor = {(t): resumo[("sequencial_original", t, 1)]["mediana"] for t in tamanhos
                  if ("sequencial_original", t, 1) in resumo}
+    # A checklist de experimentos pede as duas bases: o tempo só do laço
+    # (isolado, é o que mede a qualidade da divisão do trabalho) e o tempo total,
+    # que inclui subir processos e abrir conexões.
+    base_total = {(t): resumo[("sequencial", t, 1)]["mediana_total"] for t in tamanhos
+                  if ("sequencial", t, 1) in resumo}
     linhas = []
     for (versao, tamanho, workers), dados in sorted(
             resumo.items(), key=lambda kv: (kv[0][1], ORDEM_VERSOES.index(kv[0][0])
@@ -207,6 +212,9 @@ def montar_resumo(resumo, tamanhos):
         t1 = base.get(tamanho)
         s = speedup(t1, dados["mediana"]) if t1 else None
         f = karp_flatt(s, workers) if s and workers > 1 else None
+        t1_total = base_total.get(tamanho)
+        s_total = (speedup(t1_total, dados["mediana_total"])
+                   if t1_total and dados["mediana_total"] else None)
         linhas.append({
             "versao": versao,
             "linhas": tamanho,
@@ -219,6 +227,9 @@ def montar_resumo(resumo, tamanhos):
             "mediana_total_s": (round(dados["mediana_total"], 6)
                                 if dados["mediana_total"] is not None else None),
             "speedup_vs_refatorada": round(s, 4) if s else None,
+            "speedup_total": round(s_total, 4) if s_total else None,
+            "eficiencia_total": (round(s_total / workers, 4)
+                                 if s_total and workers else None),
             "speedup_vs_professor": (round(speedup(professor[tamanho], dados["mediana"]), 4)
                                      if professor.get(tamanho) else None),
             "eficiencia": round(eficiencia(s, workers), 4) if s else None,
@@ -295,13 +306,19 @@ def gerar_tabelas(resumo_linhas, equivalencia, texto_equivalencia):
                            _md(l["mediana_total_s"]),
                            _md(l["speedup_vs_professor"], 2),
                            _md(l["speedup_vs_refatorada"], 2),
-                           _md(l["eficiencia"], 3), _md(l["karp_flatt"], 3),
+                           _md(l["speedup_total"], 2),
+                           _md(l["eficiencia"], 3), _md(l["eficiencia_total"], 3),
+                           _md(l["karp_flatt"], 3),
                            _md(l["amdahl_limite"], 2), _md(l["gustafson_escalado"], 2)])
         partes += [_tabela(
             ["Versão", "*workers*", "Mediana (s)", "Desvio (s)", "Total (s)",
-             "Speedup vs prof.", "Speedup vs ref.", "Eficiência", "Karp–Flatt",
+             "Speedup vs prof.", "Speedup do laço", "Speedup total",
+             "Efic. do laço", "Efic. total", "Karp–Flatt",
              "Amdahl 1/f", "Gustafson S'"],
             linhas), "",
+            "**Speedup/eficiência do laço** usam só o tempo das gerações; "
+            "**total** inclui criar processos e abrir conexões — é ele que mostra "
+            "o custo de inicialização, que doi mais nas grades pequenas.", "",
             "— = não se aplica. Karp–Flatt negativo com `1/f` vazio significa "
             "**speedup superlinear** ($S_p > p$), típico de efeito de cache quando "
             "a faixa de cada worker passa a caber no cache; nesse caso as leis de "

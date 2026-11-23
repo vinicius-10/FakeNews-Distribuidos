@@ -88,6 +88,11 @@ CAMPOS = [
     "ignorantes", "espalhadores", "inativos", "bots",
 ]
 
+# Condição padrão de medição registrada em ambiente.csv, conforme a checklist
+# de experimentos do grupo (hardware + condição da medição).
+AMBIENTE_PADRAO = ("desktop na tomada, demais programas fechados; versão distribuída "
+                   "em localhost (sem rede física)")
+
 
 def _console_seguro():
     """
@@ -104,13 +109,17 @@ def _console_seguro():
 # Ambiente: o CONTRIBUTING exige registrar a máquina de cada medição
 # ---------------------------------------------------------------------------
 
-def descrever_ambiente(override_cpu=None, override_fisicos=None):
+def descrever_ambiente(override_cpu=None, override_fisicos=None, ambiente=None):
     """
     Coleta os dados da máquina que vão na tabela de configuração experimental.
 
     Núcleos físicos não existem na biblioteca padrão: usa `psutil` se estiver
     instalado e, se não estiver, aceita o valor informado à mão pelos argumentos
     `--cpu` e `--nucleos-fisicos` (é o que vai para o relatório).
+
+    `ambiente` registra a condição da medição (na tomada? local ou rede?), que a
+    checklist de experimentos do grupo pede junto com o hardware: o mesmo
+    processador rende bem menos na bateria.
     """
     fisicos = override_fisicos
     if fisicos is None:
@@ -133,6 +142,7 @@ def descrever_ambiente(override_cpu=None, override_fisicos=None):
         "sistema": f"{platform.system()} {platform.release()} ({platform.version()})",
         "python": platform.python_version(),
         "implementacao": platform.python_implementation(),
+        "ambiente": ambiente or AMBIENTE_PADRAO,
     }
 
 
@@ -319,6 +329,9 @@ def main(argv=None):
     parser.add_argument("--cpu", help="nome do processador para o relatório")
     parser.add_argument("--nucleos-fisicos", type=int,
                         help="núcleos físicos (se o psutil não estiver instalado)")
+    parser.add_argument("--ambiente",
+                        help="condição da medição (ex.: 'notebook na tomada; rede real'), "
+                             "gravada em ambiente.csv junto com o hardware")
     parser.add_argument("--rapido", action="store_true",
                         help="bateria de fumaça: grades pequenas e poucas repetições")
     args = parser.parse_args(argv)
@@ -331,7 +344,7 @@ def main(argv=None):
 
     parametros_base = ParametrosSimulacao(geracoes=args.geracoes, limiar=args.limiar,
                                           percentual_espalhadores=args.percentual)
-    ambiente = descrever_ambiente(args.cpu, args.nucleos_fisicos)
+    ambiente = descrever_ambiente(args.cpu, args.nucleos_fisicos, args.ambiente)
     gravar_ambiente(ambiente, PASTA_RESULTADOS / "ambiente.csv")
 
     plano = montar_plano(args.tamanhos, sorted(set(args.workers)), args.versoes)

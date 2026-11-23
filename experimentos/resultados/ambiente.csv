@@ -6,3 +6,4 @@ memoria_gb,31.8
 sistema,Windows 10 (10.0.26300)
 python,3.11.7
 implementacao,CPython
+ambiente,"desktop na tomada, demais programas fechados; versão distribuída em localhost (sem rede física)"
