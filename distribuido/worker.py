@@ -86,9 +86,10 @@ def executar_worker(host_coordenador, porta_coordenador, escutar="127.0.0.1",
     # coordenador; porta 0 deixa o sistema escolher uma livre.
     ouvinte = p.criar_servidor(escutar, 0, fila=1)
     ouvinte.settimeout(timeout)
-    coordenador = p.conectar(host_coordenador, porta_coordenador, timeout)
+    coordenador = None
     acima = abaixo = None
     try:
+        coordenador = p.conectar(host_coordenador, porta_coordenador, timeout)
         p.enviar_json(coordenador, p.OLA, {"porta_halo": ouvinte.getsockname()[1]})
         _, cfg = p.receber_json(coordenador, p.INICIO)
         rank, colunas = cfg["rank"], cfg["colunas"]

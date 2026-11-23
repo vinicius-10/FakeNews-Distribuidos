@@ -44,6 +44,11 @@ FORMATO_CONTAGEM = struct.Struct("!4Q")  # 4 inteiros sem sinal de 8 bytes
 
 TIMEOUT_PADRAO = 600  # segundos; toda espera tem limite para virar erro, não travar
 
+# Teto para a carga anunciada no cabeçalho: a maior mensagem legítima é uma faixa
+# da grade ou um JSON de configuração, muito abaixo disto. Sem teto, um cabeçalho
+# corrompido (ou um par mal-intencionado) faria o recebedor alocar gigabytes.
+MAX_CARGA = 256 * 1024 * 1024  # 256 MiB
+
 
 class ErroProtocolo(Exception):
     """Mensagem inesperada (tipo errado ou conteúdo inválido)."""
@@ -76,6 +81,9 @@ def receber(sock, esperado=None):
     (por exemplo, um worker fora de sincronia com os outros).
     """
     tipo, tamanho = CABECALHO.unpack(_receber_exato(sock, CABECALHO.size))
+    if tamanho > MAX_CARGA:
+        raise ErroProtocolo(f"{NOMES.get(tipo, tipo)} anuncia {tamanho} bytes, "
+                            f"acima do teto de {MAX_CARGA} (cabeçalho corrompido?)")
     carga = _receber_exato(sock, tamanho) if tamanho else b""
     if esperado is not None and tipo != esperado:
         raise ErroProtocolo(f"esperava {NOMES.get(esperado, esperado)}, "
@@ -126,12 +134,22 @@ def conectar(host, porta, timeout, espera_maxima=30.0):
 
     Num teste entre máquinas os workers podem ser iniciados antes do
     coordenador; as novas tentativas evitam ter que acertar a ordem na mão.
+
+    A tentativa de conexão em si usa um prazo curto (`min(timeout, 5)`), e não o
+    timeout do protocolo: se a máquina existe mas não responde (firewall que
+    descarta os pacotes, IP errado na mesma sub-rede), esperar os 600 s do
+    protocolo deixaria o worker parado sem mensagem e as novas tentativas nunca
+    aconteceriam. Depois de conectado, o socket passa a usar o `timeout` cheio.
     """
     limite = time.monotonic() + espera_maxima
+    prazo_conexao = min(timeout, 5.0)
     while True:
         try:
-            return configurar(socket.create_connection((host, porta), timeout=timeout), timeout)
-        except (ConnectionRefusedError, socket.timeout, OSError):
+            return configurar(
+                socket.create_connection((host, porta), timeout=prazo_conexao), timeout)
+        except (ConnectionRefusedError, socket.timeout, OSError) as erro:
             if time.monotonic() >= limite:
-                raise
+                raise ConnectionError(
+                    f"não foi possível conectar a {host}:{porta} em {espera_maxima:.0f} s "
+                    f"(último erro: {type(erro).__name__}: {erro})") from erro
             time.sleep(0.2)
