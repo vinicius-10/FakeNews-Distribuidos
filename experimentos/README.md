@@ -166,6 +166,22 @@ mediana misturaria cenários diferentes e a equivalência acusaria divergência 
 versões entre cenários diferentes não faz sentido — o trabalho muda com percentual
 e limiar.
 
+**Por que o trabalho muda com o limiar (medido):** no `comum/modelo.py`, só a
+célula `IGNORANTE` soma os 8 vizinhos (`if estado == IGNORANTE:`); espalhador e
+inativo caem nos ramos baratos. O custo de uma geração depende, então, de
+**quantas células ainda são ignorantes** — não só do tamanho da grade. Numa rodada
+de 600×600 com 1% inicial:
+
+| limiar | ignorantes ao fim | % ignorantes | tempo por geração |
+|---:|---:|---:|---:|
+| 1 | 0 | 0,0% | 0,052 s |
+| 2 | 335.992 | 93,3% | 0,137 s |
+| 3 | 356.417 | 99,0% | 0,136 s |
+
+São **2,6× de diferença no custo por geração** causada só pela composição da
+grade. Consequência prática: não se compara tempo entre limiares, só entre
+versões dentro do mesmo cenário — que é o que o speedup da bateria faz.
+
 **Sobre poucas repetições:** com 1 repetição, um único outlier de agendamento do
 sistema pode fazer a paralela de 1 worker parecer 2× mais rápida que a sequencial
 (já aconteceu no `--rapida`). O relatório avisa quando `--repeticoes < 3`.
