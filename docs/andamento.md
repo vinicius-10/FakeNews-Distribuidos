@@ -13,7 +13,7 @@ arquivo** (tabela, checklist e histórico) no mesmo PR.
 | Sequencial refatorada | ✅ feita e testada | [`sequencial/fakenews_sequencial.py`](../sequencial/fakenews_sequencial.py) + [`comum/`](../comum/) |
 | Paralela (processos e threads) | ✅ feita e testada | [`paralelo/fakenews_paralelo.py`](../paralelo/fakenews_paralelo.py) |
 | Distribuída (sockets TCP) | ✅ feita e testada (localhost, interface de rede real e 3 máquinas) | [`distribuido/`](../distribuido/) |
-| Testes | ✅ 56 testes passando (Windows e Linux): equivalência, protocolo, robustez, melhorias 2 e 3, saída, métricas | [`testes/`](../testes/) |
+| Testes | ✅ 76 testes passando (Linux; 72 no Windows antes da revisão do PR #11): equivalência, protocolo, robustez, melhorias 2 e 3, saída, métricas, bateria | [`testes/`](../testes/) |
 | 6 melhorias | ✅ implementadas · ✅ medidas · ❌ não escritas no relatório | [seção 5](#5-melhorias-escolhidas) |
 | Experimentos de desempenho | ✅ medidos numa máquina (localhost) · 🔄 3 máquinas: conexão ok, falta medir | [`experimentos/`](../experimentos/) |
 | Relatório (Overleaf) | 🔄 fundamentação e seção 3 (sequencial) escritas; o resto tem `\todo` | [`relatorio/`](../relatorio/) (cópia) |
@@ -128,7 +128,13 @@ onde cada um marca as suas tarefas.
    - [x] PR [#4](https://github.com/vinicius-10/FakeNews-Distribuidos/pull/4) (experimentos e
      robustez): integrado na `feat/implementacoes-codigo` em 23 nov.;
    - [x] PR [#5](https://github.com/vinicius-10/FakeNews-Distribuidos/pull/5) de
-     `feat/implementacoes-codigo` para a `main` (leva o PR #4): aprovado e integrado em 23 nov.
+     `feat/implementacoes-codigo` para a `main` (leva o PR #4): aprovado e integrado em 23 nov.;
+   - [x] PRs #6 a #9 (roteiro das 3 máquinas, scripts de rede, testes completos e custo da
+     sequencial) integrados em 23 nov.;
+   - [ ] apagar as branches já integradas que ficaram no GitHub (`docs/andamento-3-maquinas`,
+     `docs/guia-contribuicao`, `docs/referencias`, `feat/experimentos-custo-sequencial`,
+     `feat/experimentos-e-robustez`, `feat/implementacoes-codigo`, `fix/scripts-rede-notebooks`,
+     `test/completar-testes`).
 2. [x] **Script de experimentos** em Python ([`experimentos/`](../experimentos/README.md)):
    `medir.py` (baterias), `analisar.py` (métricas, tabelas e gráficos), `perfis.py` (tempo por
    *worker*) e `modelo.py` (melhorias do modelo).
@@ -142,9 +148,10 @@ onde cada um marca as suas tarefas.
      [`resultados/bateria/resumo.md`](../experimentos/resultados/bateria/resumo.md);
    - [ ] refazer a bateria com **5 repetições** (a rodada gravada usou 3; o padrão agora é 5) e
      explicar por que, nela, a sequencial e as *threads* (processo principal) saíram 10–25% mais
-     lentas que a paralela e a distribuída com 1 *worker* (processo novo): 43 de 54 configurações
-     com 1 *worker* (paralela e distribuída) deram *speedup* acima de 1,10, até 1,35. O `resumo.md` aponta esses casos;
-     até lá, o *speedup* da bateria contra a sequencial não vai para o relatório;
+     lentas que a paralela e a distribuída com 1 *worker* (processo novo): 43 de 54
+     configurações com 1 *worker* (paralela e distribuída) deram *speedup* acima de 1,10, até
+     1,35. O `resumo.md` aponta esses casos; até lá, o *speedup* da bateria contra a sequencial
+     não vai para o relatório. No Linux, com o `medir.py`, a paralela com 1 *worker* deu 0,95;
    - [ ] variar o **número de gerações** (fixo em 20 em todas as baterias; `medir.py` e
      `bateria.py` já aceitam `--geracoes`);
    - [x] rodar **os mesmos cenários nas três versões**; o SHA-256 da grade final confirma que
@@ -166,6 +173,13 @@ onde cada um marca as suas tarefas.
      geração; célula ignorante ~1,02 µs contra ~0,06 µs dos outros estados; limiar ×
      percentual em 1000×1000; memória de 8,9 bytes por célula (lista de listas) contra 1,04
      (vetor de bytes). Medido no i7-13650HX; usado na seção 3.4 do relatório.
+   - [x] **mesma bateria num notebook com Linux** (i5-1240P, Fedora 44, Python 3.12.16):
+     [`resultados/linux-i5/`](../experimentos/resultados/linux-i5/LEIA-ME.md). 1000², 1 a 16
+     *workers*, 5 repetições, todas com a mesma grade. Professor 14,40 s, refatorada 4,50 s
+     (3,2×). *Speedup* do laço máximo de 4,46 (paralela, 12 processos) e 4,56 (distribuída,
+     12 *workers*); eficiência cai para 0,71 já com 4 *workers* e o ganho para em 12 (12 núcleos
+     físicos, só 4 P). *Threads*: 0,88–0,99, como no Windows. Fica numa tabela à parte, sem
+     misturar com o PC do grupo;
 5. [x] **Tabelas e gráficos** gerados por script (`resultados/tabelas.md` e
    `resultados/graficos/`: *speedup*, eficiência, GIL, melhorias e modelo).
 6. [ ] **Análises pedidas no enunciado**: os dados estão medidos; falta escrever a interpretação
@@ -209,6 +223,10 @@ onde cada um marca as suas tarefas.
 11. [ ] Rodar em outros ambientes:
     - [x] **Linux**: testes e as três versões rodados no Ubuntu (WSL, Python 3.12.3), com o mesmo
       resultado do Windows;
+    - [x] **Linux nativo** (Fedora, i5-1240P, `main` em `ec05145`, depois do PR #9): 56 testes OK
+      com Python 3.12.16 e 3.14.10 (~5,5 s); `custo_sequencial --rapido` OK; em 400×400, 30
+      gerações e limiar 2, sequencial, paralela (8 processos e 4 *threads*) e distribuída
+      (4 *workers*, com e sem `--bits`) deram 67.670 / 54 / 92.276;
     - [x] **interface de rede real**: distribuída com `--host 0.0.0.0` e *workers* conectando
       pelo IP da máquina (2 e 3 *workers*), mesmo resultado da sequencial
       ([`validacao.md`](../experimentos/resultados/rede/validacao.md));
@@ -265,6 +283,11 @@ onde cada um marca as suas tarefas.
 - **23 nov. 2026**: seção 3 do relatório escrita (3.3 funcionamento da sequencial, com fluxograma e
   exemplo 5×5 passo a passo; 3.4 análise de custo). Novo `experimentos/custo_sequencial.py` mede o
   custo do código do professor (perfil por etapa, custo por estado, limiar × percentual e memória).
+- **23 nov. 2026**: `main` depois do PR #9 conferida em Linux nativo (Fedora, i5-1240P): 56 testes
+  OK com Python 3.12 e 3.14 e as três versões com o mesmo resultado. Bateria do `medir.py` em
+  1000² rodada no mesmo notebook (`resultados/linux-i5/`) e colocada no capítulo de experimentos
+  do Overleaf para comparar com o PC do grupo. Registradas as branches integradas que ainda
+  podem ser apagadas.
 - **23 nov. 2026**: criado o `experimentos/bateria.py`, que fecha o item de variar **% de
   espalhadores** e **limiar**. Grade cartesiana percentual × limiar × tamanho × versão ×
   trabalhadores; 18 cenários e 702 medições rodadas nesta máquina, **todas** com a mesma grade da
@@ -279,4 +302,5 @@ onde cada um marca as suas tarefas.
   (CONTRIBUTING) e o `resumo.md` aponta *speedup* com 1 *worker* fora de 0,90–1,10 na paralela e na
   distribuída; o `resumo.md` da rodada gravada foi regenerado do mesmo CSV (sem medir de novo) e
   aponta 43 de 54 configurações acima de 1,10. "Variar gerações" voltou para pendente (as baterias
-  usaram 20 gerações). O `cenarios.json` é só a lista dos cenários; nenhum script o lê.
+  usaram 20 gerações). O `cenarios.json` é só a lista dos cenários; nenhum script o lê. Suíte com
+  76 testes (Linux, Python 3.12.16).
