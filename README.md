@@ -63,8 +63,8 @@ A grade inicial é sorteada com semente fixa e as regras são determinísticas, 
 | Versão paralela (processos e threads) | ✅ Implementada |
 | Versão distribuída (sockets TCP) | ✅ Implementada |
 | Testes de equivalência entre as versões | ✅ Implementados |
-| Melhorias (6) | ✅ Implementadas, falta medir e documentar |
-| Experimentos de desempenho | ⏳ Planejado |
+| Melhorias (6) | ✅ Implementadas e medidas |
+| Experimentos de desempenho (medição + tabelas + gráficos) | ✅ Medidos na máquina do grupo |
 | Relatório e apresentação | 🔄 Em escrita |
 
 ## 📚 Conceitos Aplicados
@@ -107,6 +107,11 @@ A grade inicial é sorteada com semente fixa e as regras são determinísticas, 
 │   ├── worker.py                         # Calcula uma faixa e troca as bordas com os vizinhos
 │   └── executar_local.py                 # Coordenador + workers nesta máquina (testes e demonstração)
 ├── testes/                               # Testes de equivalência com a versão do professor
+├── experimentos/                         # Medição de desempenho, análise e gráficos
+│   ├── medir.py                          # Baterias de medição (aquecimento + repetições, CSV)
+│   ├── analisar.py                       # Speedup, eficiência, Karp-Flatt, Amdahl, Gustafson
+│   ├── perfis.py                         # Cálculo x comunicação x espera por worker
+│   └── resultados/                       # CSVs, tabelas.md, perfis.md e gráficos
 ├── relatorio/                            # Cópia do relatório (LaTeX) mantida no Overleaf
 ├── .github/pull_request_template.md      # Modelo de descrição dos pull requests
 ├── CONTRIBUTING.md                       # Guia de contribuição do grupo
@@ -174,6 +179,24 @@ As melhorias do modelo (resistência e bots) ficam desligadas por padrão, para 
 python -m unittest discover -s testes -v
 ```
 Comparam as versões refatorada, paralela (processos e threads) e distribuída com a versão do professor, geração a geração, em vários tamanhos, limiares e números de *workers*; com as melhorias ligadas, comparam com a sequencial refatorada.
+
+### Experimentos
+```bash
+# bateria de fumaça: termina em segundos e confere se a medição funciona
+python -m experimentos.medir --rapido
+
+# baterias completas (ver experimentos/README.md para a lista e o porquê de separar)
+python -m experimentos.medir --tamanhos 1000 2000 --workers 1 2 4 8 16 24 \
+    --versoes paralela_processos --saida experimentos/resultados/medicoes_paralela.csv
+
+# tabelas + resumo + gráficos a partir de todas as baterias gravadas
+python -m experimentos.analisar
+
+# perfil por worker: cálculo x comunicação x espera, e desbalanceamento
+python -m experimentos.perfis
+```
+
+Os resultados ficam em [`experimentos/resultados/`](experimentos/resultados/): `medicoes_*.csv` (uma linha por repetição), `resumo.csv` (mediana, desvio, *speedup*, eficiência, Karp–Flatt, Amdahl e Gustafson), `tabelas.md`, `perfis.csv` e os gráficos. A mediana é a estatística reportada (aquecimento descartado + repetições) e cada execução grava o SHA-256 da grade final, então a bateria também serve de teste de equivalência em escala. `matplotlib` é opcional e só desenha os gráficos. Metodologia completa em [`experimentos/README.md`](experimentos/README.md).
 
 ## 🤝 Como Contribuir
 Antes de contribuir, leia o [guia de contribuição](CONTRIBUTING.md): fluxo de *branches* e *pull requests*, padrão de commits, regras para o código rodar no Windows e no Linux, testes, experimentos e como referenciar o uso de IA.
