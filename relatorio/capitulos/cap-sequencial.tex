@@ -149,7 +149,7 @@ A memória também cresce com $L \cdot C$. A grade é uma lista de listas de int
 
 \subsection{Medições}\label{sub:custo-medicoes}
 
-Para verificar a estimativa, a Tabela~\ref{tab:custo-escala} mostra o tempo do laço de gerações do código fornecido em três tamanhos de grade, com 20~gerações, 5\% de espalhadores e limiar~2, sem impressão no terminal. As medições foram feitas em um processador Intel Core i9-12900F, com Windows~11 e Python~3.11.7, e o valor apresentado é a mediana de três repetições.
+Para verificar a estimativa, a Tabela~\ref{tab:custo-escala} mostra o tempo do laço de gerações do código fornecido em três tamanhos de grade, com 20~gerações, 5\% de espalhadores e limiar~2, sem impressão no terminal. As medições foram feitas na Máquina~A da Seção~\ref{cap:experimentos} (Intel Core i9-12900F, Windows~11 e Python~3.11.7), e o valor apresentado é a mediana de três repetições, após uma execução de aquecimento descartada.
 
 \begin{table}[htb]
     \centering
@@ -168,6 +168,8 @@ Para verificar a estimativa, a Tabela~\ref{tab:custo-escala} mostra o tempo do l
 \end{table}
 
 Quando o número de células é multiplicado por quatro, o tempo também é multiplicado por quatro, e o tempo por célula e por geração permanece em torno de 0,82~$\mu$s: o custo cresce linearmente com $L \cdot C$, como previsto. Esse valor corresponde a milhares de ciclos de relógio do processador por célula, o que reflete o custo de interpretar o código Python, em que cada acesso a uma lista, comparação ou chamada de função é executado pelo interpretador.
+
+A versão do interpretador também influencia o valor absoluto. Na mesma máquina, com Python~3.12.10, as mesmas medições levaram 4,27, 19,07 e 73,58~s, de 3\% a 16\% a mais, e o tempo por célula e por geração ficou entre 0,85 e 0,95~$\mu$s, sem tendência com o tamanho da grade. Essa variação está dentro da diferença observada entre execuções repetidas, que chegou a cerca de 10\% na grade de $2000 \times 2000$, e o crescimento continua aproximadamente linear. Por isso, cada medição deste trabalho informa a versão do Python utilizada, e só são comparados tempos obtidos na mesma máquina e com a mesma versão.
 
 A Tabela~\ref{tab:custo-perfil} mostra como o tempo de uma geração se divide entre as etapas. Essa medição foi feita em outra máquina (Intel Core i7-13650HX, Windows~11, Python~3.12.10), na grade de $1000 \times 1000$ e com os mesmos parâmetros, e o valor apresentado é a mediana de cinco repetições, após uma execução de aquecimento descartada. Como o \texttt{deepcopy} ocorre dentro de \texttt{proxima\_geracao} e o código fornecido não foi alterado, a cópia foi medida à parte, sobre uma cópia da mesma grade, e o tempo da varredura foi obtido por diferença; os valores dessas duas linhas são, portanto, estimativas.
 

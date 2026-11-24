@@ -4,16 +4,127 @@
 
 \chapter{Melhorias e extensões}\label{cap:melhorias}
 
-Este capítulo descreve as melhorias propostas sobre o modelo e a implementação originais. Para cada uma são apresentadas a motivação, a solução adotada, a fundamentação e o impacto observado.
+Esta seção descreve as seis melhorias implementadas sobre o modelo e o código originais. Para cada uma são apresentadas a motivação, a solução adotada, a fundamentação e o impacto observado. Duas melhorias tratam do desempenho (a grade compacta, na Seção~\ref{sec:melhoria-grade}, e a compactação das fronteiras em \textit{bits}, na Seção~\ref{sec:melhoria-bits}), duas ampliam a observação da simulação (as estatísticas com perfil de tempo, na Seção~\ref{sec:melhoria-estatisticas}, e a visualização gráfica, na Seção~\ref{sec:melhoria-visualizacao}) e duas alteram o modelo (a resistência individual, na Seção~\ref{sec:melhoria-resistencia}, e os \textit{bots}, na Seção~\ref{sec:melhoria-bots}).
 
-\section{Melhoria 1: \todo{nome}}
+Todas funcionam nas três versões (sequencial refatorada, paralela e distribuída), exceto a compactação das fronteiras, que só existe na distribuída. As melhorias do modelo ficam desligadas por padrão, para que o programa reproduza o código original; ligadas, as três versões continuam produzindo exatamente as mesmas grades entre si, o que é verificado pelos testes automáticos.
 
-\textbf{Motivação.} \todo{}
+\section{Melhoria 1: grade compacta sem cópia a cada geração}\label{sec:melhoria-grade}
 
-\textbf{Implementação.} \todo{}
+\textbf{Motivação.} O código original representa a grade como uma lista de listas de inteiros e, a cada geração, cria uma cópia completa com \texttt{deepcopy} antes de calcular a geração seguinte. A análise de custo da Seção~\ref{sec:custo-sequencial} mostrou que essa cópia consome cerca de 21\% do tempo de uma geração (Tabela~\ref{tab:custo-perfil}) e que a lista de listas ocupa quase 9~\textit{bytes} por célula. Além disso, uma lista de listas não pode ser colocada em memória compartilhada nem enviada por \textit{socket} sem ser convertida, o que seria necessário nas versões paralela e distribuída.
 
-\textbf{Fundamentação.} \todo{}
+\textbf{Implementação.} No núcleo comum (\texttt{comum/modelo.py}), a grade de $L \times C$ células é um vetor de \textit{bytes} (\texttt{bytearray}) de $(L+2) \cdot C$ posições, com um \textit{byte} por célula, linha após linha, e uma linha de zeros acima e outra abaixo da grade (a moldura). Como zero representa o estado ignorante, a moldura tem o mesmo efeito da borda fixa do código original, sem testes de limite para as linhas; as colunas continuam com teste de limite. São mantidos dois vetores, um com a geração atual, que só é lido, e outro com a próxima, que só é escrito, e ao fim de cada geração os dois apenas trocam de papel, sem cópia. A contagem de vizinhos espalhadores é feita no próprio laço, somando oito acessos a uma tupla que indica quanto cada estado conta, em vez de uma chamada de função por célula com dois laços internos, como no original, e a contagem de estados usa o método \texttt{count} do tipo \texttt{bytes}. A grade inicial continua sendo gerada pela função \texttt{criar\_grade} do código original, com a mesma semente, e só depois é convertida para o vetor.
 
-\textbf{Resultado.} \todo{}
+\textbf{Fundamentação.} A separação entre a grade lida e a grade escrita é o \textit{double buffering} exigido pela atualização síncrona dos autômatos celulares (Seção~\ref{sec:automatos-celulares})~\cite{BertoTagliabue2023}, e as linhas extras correspondem às células fantasmas usadas na decomposição de domínio~\cite{Kjolstad2010}: a mesma moldura que substitui a borda fixa na grade inteira recebe as linhas dos vizinhos quando a grade é dividida em faixas. A troca de referências entre os dois vetores elimina a cópia sem perder a independência entre as gerações, que era o objetivo do \texttt{deepcopy} no original.
 
-%% Copiar o bloco acima para cada melhoria adicional.
+\textbf{Resultado.} A Tabela~\ref{tab:melhoria-grade} compara o tempo do laço de gerações do código original com o da versão sequencial refatorada, com 20~gerações, 5\% de espalhadores e limiar~2, nas duas máquinas da Seção~\ref{cap:experimentos}.
+
+\begin{table}[htb]
+    \centering
+    \caption{Tempo do laço de gerações do código original e da versão com a grade compacta}
+    \label{tab:melhoria-grade}
+    \begin{tabular}{llrrr}
+        \toprule
+        \textbf{Máquina} & \textbf{Grade} & \textbf{Original (s)} & \textbf{Grade compacta (s)} & \textbf{Ganho} \\
+        \midrule
+        A (Windows) & $500 \times 500$   & 4,16  & 1,18  & 3,5$\times$ \\
+        A (Windows) & $1000 \times 1000$ & 16,46 & 4,94  & 3,3$\times$ \\
+        A (Windows) & $2000 \times 2000$ & 65,88 & 19,55 & 3,4$\times$ \\
+        B (Linux)   & $1000 \times 1000$ & 14,40 & 4,50  & 3,2$\times$ \\
+        \bottomrule
+    \end{tabular}
+    \fonte{}
+\end{table}
+
+O ganho ficou entre 3,2 e 3,5 vezes, sem depender do tamanho da grade nem da máquina, e as grades produzidas são idênticas às do original em todas as gerações. Esse ganho tem duas origens. Se apenas o \texttt{deepcopy} fosse removido, o tempo cairia no máximo para $1 - 0{,}21 = 0{,}79$ do original, um ganho de cerca de 1,27 vez; o restante vem da varredura mais barata, com acesso direto ao vetor, contagem de vizinhos sem chamada de função e sem testes de limite nas linhas. Essa divisão é uma estimativa, pois a fração do \texttt{deepcopy} foi medida em outra máquina (Seção~\ref{sub:custo-medicoes}). Em memória, numa grade de $1000 \times 1000$, a lista de listas ocupa 8,86~\textit{bytes} por célula, e o vetor, 1,04, cerca de 8,5 vezes menos. Por executar o mesmo cálculo das versões paralela e distribuída sem custo de comunicação, a versão com a grade compacta é a referência usada no cálculo do \textit{speedup} (Seção~\ref{cap:experimentos}).
+
+\section{Melhoria 2: estatísticas e perfil de tempo}\label{sec:melhoria-estatisticas}
+
+\textbf{Motivação.} O código original imprime apenas a contagem de estados de cada geração e o tempo total. Esses dados mostram quanto uma versão paralela ganha, mas não por que ela deixa de ganhar: para analisar gargalos, sincronização e custo de comunicação, como pede o enunciado, é preciso saber quanto tempo cada processo passa calculando, comunicando e esperando os demais.
+
+\textbf{Implementação.} Com a opção \texttt{-{}-estatisticas PASTA}, as três versões gravam três arquivos CSV, por meio da classe \texttt{Estatisticas} (\texttt{comum/estatisticas.py}): a contagem de cada estado em cada geração; o perfil de tempo de cada \textit{worker}, com os tempos de cálculo, de comunicação e de espera e o número de \textit{bytes} enviados; e um resumo com o pico de espalhadores, o alcance final e o índice de desbalanceamento da Equação~\ref{eq:desbalanceamento}. Na versão paralela, cada \textit{worker} mede o tempo de cálculo e o tempo nas barreiras; a comunicação é nula, pois os dados estão em memória compartilhada. Na distribuída, o \textit{worker} mede separadamente a troca de fronteiras e o envio da contagem (comunicação), o cálculo da faixa (cálculo) e a espera pela decisão do coordenador (espera). Os perfis são coletados ao fim da execução, e a coleta das contagens apenas lê dados já calculados, de modo que a melhoria não altera a grade, o que é verificado pelos testes.
+
+\textbf{Fundamentação.} \citeonline{HoeflerBelli2015} recomendam que resultados de desempenho paralelo informem a referência do \textit{speedup} e o seu tempo absoluto, relatem a variabilidade das medidas e documentem o ambiente, para que os números possam ser interpretados e comparados. Medidas agregadas como o \textit{speedup} e a fração serial de \citeonline{KarpFlatt1990} indicam a existência de sobrecarga, mas não a sua origem; o perfil por \textit{worker} separa o tempo perdido em comunicação do tempo perdido em espera, este causado pelo desbalanceamento de carga~\cite{Foster1995}.
+
+\textbf{Resultado.} A Tabela~\ref{tab:melhoria-perfil} mostra, para a grade de $1000 \times 1000$ na Máquina~A, a fração do tempo do laço gasta em cada fase, segundo o perfil de cada \textit{worker} (mediana das repetições). A soma das três fases ficou entre 99,7\% e 100,6\% do tempo do laço, o que indica que elas cobrem toda a execução.
+
+\begin{table}[htb]
+    \centering
+    \caption{Divisão do tempo do laço por fase na grade de $1000 \times 1000$ (Máquina A)}
+    \label{tab:melhoria-perfil}
+    \begin{tabular}{lrrrrr}
+        \toprule
+        \textbf{Versão} & \textbf{\textit{Workers}} & \textbf{Cálculo (\%)} & \textbf{Comunicação (\%)} & \textbf{Espera (\%)} & \textbf{Índice $I$} \\
+        \midrule
+        Paralela    & 1  & 99,95 & 0,00 & 0,05  & 1,000 \\
+                    & 4  & 96,32 & 0,00 & 3,65  & 1,018 \\
+                    & 16 & 80,54 & 0,00 & 19,31 & 1,068 \\
+        \midrule
+        Distribuída & 1  & 99,93 & 0,03 & 0,04  & 1,000 \\
+                    & 4  & 96,72 & 0,25 & 3,03  & 1,012 \\
+                    & 16 & 79,66 & 0,75 & 19,31 & 1,101 \\
+        \bottomrule
+    \end{tabular}
+    \fonte{}
+\end{table}
+
+O perfil mostra que, com 16~\textit{workers}, quase um quinto do tempo é gasto esperando nas barreiras, nas duas versões, enquanto a comunicação da distribuída em \textit{localhost} fica abaixo de 1\%. A perda de eficiência observada acima de oito \textit{workers} não vem, portanto, da troca de mensagens, e sim da espera pelo \textit{worker} mais lento em cada geração. Sem essa instrumentação, as duas causas não poderiam ser distinguidas. A análise completa desses dados está na Seção~\ref{cap:experimentos}.
+
+\section{Melhoria 3: visualização gráfica da propagação}\label{sec:melhoria-visualizacao}
+
+\textbf{Motivação.} A saída do código original é textual: a contagem de estados por geração e, opcionalmente, o canto superior esquerdo da grade impresso no terminal. Ela não permite ver como a notícia avança pelo espaço, por exemplo, se a propagação forma frentes, se para em regiões com poucos espalhadores ou como as melhorias do modelo mudam o padrão.
+
+\textbf{Implementação.} Com a opção \texttt{-{}-animacao arquivo.html}, as três versões gravam uma animação da grade, gerada pela classe \texttt{Animacao} (\texttt{comum/visualizacao.py}). O resultado é um único arquivo HTML, sem dependências externas, que abre em qualquer navegador no Windows ou no Linux e mostra a grade geração a geração, com uma cor por estado, botões para reproduzir e pausar e uma barra para escolher a geração. Cada quadro é copiado da grade depois que a geração termina, sem interferir no cálculo: na versão paralela, o processo principal lê a grade entre as barreiras A e B (Seção~\ref{sec:sincronizacao-paralela}); na distribuída, os \textit{workers} passam a enviar a sua faixa ao coordenador a cada geração. Para que o arquivo continue leve, grades com mais de 300 linhas ou colunas são reduzidas por amostragem, mantendo uma célula a cada $\lceil \max(L, C)/300 \rceil$ em cada direção, e cada célula é gravada como um único caractere.
+
+\textbf{Fundamentação.} A observação da evolução da grade ao longo das gerações é a forma usual de estudar o comportamento de um autômato celular: o Jogo da Vida foi apresentado por meio da sequência de gerações de seus padrões~\cite{Gardner1970}, e \citeonline{Wolfram1983} analisa os autômatos a partir dos padrões que a sua evolução produz. No modelo deste trabalho, em que cada célula depende apenas dos vizinhos, a visualização mostra diretamente o caráter local da propagação discutido na Seção~\ref{sec:modelos-rumor}.
+
+\textbf{Resultado.} Os testes verificam que, com a animação ligada, as grades de todas as versões continuam iguais às do original e que o arquivo gravado contém um quadro por geração. Numa grade de $1000 \times 1000$, a amostragem mantém uma célula a cada quatro em cada direção, e cada quadro tem $250 \times 250 = 62\,500$ caracteres. Como, na versão distribuída, a animação faz cada \textit{worker} enviar a faixa inteira a cada geração, ela é destinada à demonstração e à análise do modelo, e ficou desligada em todas as medições de desempenho.
+
+\section{Melhoria 4: resistência individual}\label{sec:melhoria-resistencia}
+
+\textbf{Motivação.} No modelo original, o limiar de convencimento $\lambda$ é o mesmo para todas as células. Em uma população real, algumas pessoas acreditam numa notícia depois de vê-la uma vez, e outras só depois de muitas exposições, ou nunca.
+
+\textbf{Implementação.} Com a opção \texttt{-{}-resistencia MIN MAX}, cada célula recebe um limiar próprio, sorteado uniformemente entre MIN e MAX (inclusive) pela função \texttt{criar\_limiares}. O sorteio usa um gerador de números pseudoaleatórios separado, com semente $42 + 1$, para ser reprodutível sem alterar a sequência de sorteios da grade inicial, que continua igual à do original. Os limiares são guardados num vetor com o mesmo formato da grade, e a função \texttt{calcular\_faixa} compara a contagem de vizinhos de cada célula com o limiar dela. O vetor de limiares só é lido: na versão paralela, fica num terceiro bloco de memória compartilhada, do qual cada \textit{worker} copia a sua parte uma única vez; na distribuída, o coordenador envia a cada \textit{worker} os limiares da sua faixa, também uma única vez, na mensagem LIMIARES.
+
+\textbf{Fundamentação.} No modelo de limiar de \citeonline{Granovetter1978}, cada indivíduo tem o seu próprio limiar, e a distribuição desses limiares na população determina se o comportamento se espalha (Seção~\ref{sec:modelos-rumor}); a melhoria recupera essa heterogeneidade. Estudos sobre boatos também apontam a importância de indivíduos resistentes: \citeonline{Jin2013} mostram que um modelo epidemiológico com indivíduos céticos, que recebem o boato mas não o repassam, se ajusta melhor a notícias e boatos no Twitter que um modelo sem eles, e \citeonline{AmaralArenzon2018} mostram que, com ceticismo forte, o destino de um boato passa a depender da exposição inicial.
+
+\textbf{Resultado.} A Tabela~\ref{tab:melhoria-modelo}, na Seção~\ref{sec:melhoria-bots}, mostra o efeito da melhoria numa grade de $1000 \times 1000$, com 5\% de espalhadores e limite de 60~gerações, comparado com o modelo base com limiar~2. O alcance é a fração da população que deixou de ser ignorante. Com limiares entre 1 e 3, cuja média é igual ao limiar do modelo base, o alcance subiu de 57,90\% para 75,26\%, e a propagação terminou em 22~gerações, contra 56: cerca de um terço das células passa a ser convencida por um único vizinho e abre caminho para a notícia, de modo que a heterogeneidade, por si só, facilitou a propagação. Com limiares entre 3 e 5, uma população mais difícil de convencer, o alcance caiu para 5,06\%, e a propagação terminou na terceira geração.
+
+\section{Melhoria 5: \textit{bots}}\label{sec:melhoria-bots}
+
+\textbf{Motivação.} No modelo original, todo espalhador se torna inativo na geração seguinte. Contas automatizadas (\textit{bots}) não se comportam assim: continuam publicando o mesmo conteúdo indefinidamente.
+
+\textbf{Implementação.} Com a opção \texttt{-{}-bots FRACAO}, um novo estado, \textit{bot} (valor~3), é acrescentado ao modelo. Um \textit{bot} conta como espalhador para os seus vizinhos, mas nunca se torna inativo. As posições dos \textit{bots} são sorteadas depois de criada a grade do original, com um gerador separado (semente $42 + 2$), em $\lfloor L \cdot C \cdot \textrm{FRACAO} \rfloor$ sorteios; como uma posição pode ser sorteada mais de uma vez, a fração efetiva de \textit{bots} pode ser ligeiramente menor que a pedida. A contagem de estados ganha uma quarta categoria, e o critério de parada passa a considerar os \textit{bots}: a simulação continua enquanto houver espalhadores ou \textit{bots}. Como os \textit{bots} nunca deixam de espalhar, com eles a simulação sempre vai até o limite de gerações.
+
+\textbf{Fundamentação.} \citeonline{Shao2018} analisaram milhões de publicações no Twitter e mostraram que as contas identificadas como \textit{bots}, cerca de 6\% das contas da amostra, publicaram 31\% do conteúdo de baixa credibilidade, agindo principalmente nos primeiros momentos da difusão. Um estado que espalha continuamente, sem se tornar inativo, representa esse comportamento persistente.
+
+\textbf{Resultado.} A Tabela~\ref{tab:melhoria-modelo} reúne os cenários das melhorias do modelo, todos sobre a mesma grade inicial.
+
+\begin{table}[htb]
+    \centering
+    \caption{Efeito das melhorias do modelo na grade de $1000 \times 1000$, com 5\% de espalhadores e limite de 60 gerações}
+    \label{tab:melhoria-modelo}
+    \begin{tabular}{lrrrr}
+        \toprule
+        \textbf{Cenário} & \textbf{Pico de espalhadores} & \textbf{Geração do pico} & \textbf{Alcance final} & \textbf{Gerações} \\
+        \midrule
+        Modelo base (limiar 2)              & 55\,899  & 2 & 57,90\% & 56 \\
+        Resistência entre 1 e 3             & 166\,385 & 2 & 75,26\% & 22 \\
+        Resistência entre 3 e 5             & 1\,822   & 1 & 5,06\%  & 3  \\
+        \textit{Bots} (2\%)                 & 129\,474 & 3 & 93,19\% & 60 \\
+        \textit{Bots} (2\%) e resistência entre 3 e 5 & 4\,579 & 1 & 7,27\% & 60 \\
+        \bottomrule
+    \end{tabular}
+    \fonte{}
+\end{table}
+
+Com 2\% de \textit{bots} e limiar~2, o alcance subiu de 57,90\% para 93,19\%: no modelo base a propagação se esgota quando os espalhadores se tornam inativos, enquanto os \textit{bots} continuam convencendo os vizinhos que ainda são ignorantes até o fim da simulação. Numa população resistente (limiares entre 3 e 5), o efeito foi pequeno: o alcance passou de 5,06\% para 7,27\%, e parte dessa diferença corresponde às próprias células \textit{bot}, que não são ignorantes e entram no cálculo do alcance. Os dois resultados indicam que, no modelo, a persistência dos \textit{bots} amplia muito a propagação quando a população é suscetível, mas não a sustenta numa população resistente.
+
+\section{Melhoria 6: compactação das fronteiras em \textit{bits}}\label{sec:melhoria-bits}
+
+\textbf{Motivação.} Na versão distribuída, cada \textit{worker} envia a cada geração até duas linhas de fronteira, com um \textit{byte} por célula (Seção~\ref{sec:protocolo-distribuida}). Numa rede real, o volume de dados transmitido pesa no tempo de cada geração, e a maior parte desse volume é desnecessária: quem recebe uma linha de \textit{halo} não recalcula aquelas células, apenas verifica, para cada uma, se ela conta como espalhadora.
+
+\textbf{Implementação.} Com a opção \texttt{-{}-bits}, a função \texttt{empacotar\_bits} representa cada célula da linha de fronteira por um \textit{bit}, igual a 1 quando a célula conta como espalhadora (espalhador ou \textit{bot}), e a linha passa a ocupar $\lceil C/8 \rceil$ \textit{bytes}. Quem recebe usa a função \texttt{desempacotar\_bits} para gravar na linha de \textit{halo} o estado espalhador onde o \textit{bit} é 1 e o estado ignorante onde é 0. Essa substituição não altera o resultado, porque a linha de \textit{halo} só é lida na contagem de vizinhos espalhadores, em que inativo e ignorante contam da mesma forma.
+
+\textbf{Fundamentação.} Em autômatos celulares executados em memória distribuída, a troca de fronteiras a cada passo é a principal sobrecarga da paralelização, e \citeonline{Giordano2019} comparam estratégias para reduzi-la, como sobrepor a comunicação ao cálculo do interior de cada parte e usar fronteiras mais largas para trocar dados com menos frequência. A compactação ataca o mesmo custo por outro lado, reduzindo o volume de cada troca; ela continua enviando os dados como \textit{bytes} contíguos, sem serialização~\cite{Dalcin2011}.
+
+\textbf{Resultado.} Na grade de $1000 \times 1000$, cada linha de fronteira passou de 1\,005 para 130~\textit{bytes}, contando o cabeçalho, e o volume médio enviado por \textit{worker} a cada geração caiu de 1\,921 para 281~\textit{bytes} com 16~\textit{workers}, uma redução de 85\%, que inclui a contagem enviada ao coordenador. Em \textit{localhost}, contudo, o tempo não diminuiu: com 16~\textit{workers}, o laço levou 0,53~s com um \textit{byte} por célula e 0,55~s com a compactação, na Máquina~A. Como a comunicação local já representava menos de 1\% do tempo do laço (Tabela~\ref{tab:melhoria-perfil}), não havia o que ganhar, e o custo de empacotar e desempacotar os \textit{bits} em Python elevou a fração de comunicação de 0,75\% para 2,47\%. O ganho esperado é numa rede física, em que o tempo de transmissão depende do volume de dados. Todos os testes de equivalência da versão distribuída são executados com e sem a compactação, com o mesmo resultado. \todo{Incluir o efeito da compactação no tempo entre três máquinas quando a medição for feita.}
