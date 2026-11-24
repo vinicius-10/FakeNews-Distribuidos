@@ -15,7 +15,8 @@ completar exatamente esse número de bytes.
 
 Mensagens (quem envia → quem recebe)
 -----------------------------------
-OLA        worker → coordenador   JSON {"porta_halo"}: porta em que o worker espera o vizinho de cima
+OLA        worker → coordenador   JSON {"porta_halo", "ordem" opcional}: porta em que o worker
+                                  espera o vizinho de cima e a posição pedida na cadeia
 INICIO     coordenador → worker   JSON com a faixa, os parâmetros e o endereço do vizinho de baixo
 GRADE      coordenador → worker   bytes das linhas da faixa (estado inicial)
 LIMIARES   coordenador → worker   bytes dos limiares individuais da faixa (melhoria resistência)
@@ -26,6 +27,13 @@ CONTAGEM   worker → coordenador   4 inteiros: ignorantes, espalhadores, inativ
 FAIXA      worker → coordenador   bytes das linhas da faixa (verificação, animação e resultado final)
 DECISAO    coordenador → worker   1 byte: 1 = continua, 0 = para
 RESULTADO  worker → coordenador   JSON com o perfil de tempo do worker
+
+Canal de controle da medição em rede (`distribuido/agente.py` ↔
+`experimentos/medir_rede.py`), separado da simulação:
+
+AGENTE     agente → medição       JSON {"nome", "posicao", "ambiente"}: a máquina se apresenta
+COMANDO    medição → agente       JSON {"acao": "workers" | "medir" | "fim", ...}
+RESPOSTA   agente → medição       JSON com o resultado do comando
 """
 
 import json
@@ -34,10 +42,12 @@ import struct
 import time
 
 OLA, INICIO, GRADE, LIMIARES, PRONTO, LARGADA, HALO, CONTAGEM, FAIXA, DECISAO, RESULTADO = range(1, 12)
+AGENTE, COMANDO, RESPOSTA = range(12, 15)
 
 NOMES = {OLA: "OLA", INICIO: "INICIO", GRADE: "GRADE", LIMIARES: "LIMIARES", PRONTO: "PRONTO",
          LARGADA: "LARGADA", HALO: "HALO", CONTAGEM: "CONTAGEM", FAIXA: "FAIXA",
-         DECISAO: "DECISAO", RESULTADO: "RESULTADO"}
+         DECISAO: "DECISAO", RESULTADO: "RESULTADO",
+         AGENTE: "AGENTE", COMANDO: "COMANDO", RESPOSTA: "RESPOSTA"}
 
 CABECALHO = struct.Struct("!BI")    # tipo (1 byte) + tamanho (4 bytes)
 FORMATO_CONTAGEM = struct.Struct("!4Q")  # 4 inteiros sem sinal de 8 bytes

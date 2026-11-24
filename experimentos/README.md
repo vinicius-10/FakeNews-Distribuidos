@@ -62,6 +62,14 @@ python -m experimentos.bateria --percentuais 0.05 --limiares 2 --tamanhos 2000 \
 py -3.12 -m experimentos.verificar_342
 py -3.12 -m experimentos.verificar_342 --tabela 2     # só a Tabela 2
 
+# 8) REDE REAL: distribuída em várias máquinas, com um comando só (cada máquina
+#    liga `python -m distribuido.agente --coordenador IP:5000 --posicao N`).
+#    Sequencial em cada máquina, 1 a N máquinas x 1/2/4 workers, --bits e
+#    gerações/percentual/limiar; retoma de onde parou. Roteiro do dia em
+#    distribuido/rede/ROTEIRO-medicao-4-maquinas.md
+python -m experimentos.medir_rede --maquinas 4 --simular
+python -m experimentos.medir_rede --maquinas 4 --rede "Wi-Fi"
+
 # analisar (aceita vários CSVs; as baterias são somadas)
 python -m experimentos.analisar --csv experimentos/resultados/medicoes_escalabilidade.csv \
     experimentos/resultados/medicoes_paralela.csv experimentos/resultados/medicoes_gil.csv \
