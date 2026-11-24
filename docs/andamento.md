@@ -162,8 +162,10 @@ onde cada um marca as suas tarefas.
      configurações com 1 *worker* (paralela e distribuída) deram *speedup* acima de 1,10, até
      1,35. O `resumo.md` aponta esses casos; até lá, o *speedup* da bateria contra a sequencial
      não vai para o relatório. No Linux, com o `medir.py`, a paralela com 1 *worker* deu 0,95;
-   - [ ] variar o **número de gerações** (fixo em 20 em todas as baterias; `medir.py` e
-     `bateria.py` já aceitam `--geracoes`);
+   - [x] variar o **número de gerações** (fixo em 20 em todas as baterias; `medir.py` e
+     `bateria.py` já aceitam `--geracoes`). Medido com 10 e 40 gerações em 1000² e 2000²:
+     [`resultados/geracoes/resumo.md`](../experimentos/resultados/geracoes/resumo.md) — equivalência
+     confirmada nas 180 medições e speedup saturando perto de 10× com 16 trabalhadores;
    - [x] rodar **os mesmos cenários nas três versões**; o SHA-256 da grade final confirma que
      todas deram o mesmo resultado em todas as execuções;
    - [x] 1 execução de aquecimento descartada + repetições, reportando a mediana (5 ou mais na
