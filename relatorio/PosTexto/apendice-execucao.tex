@@ -2,10 +2,74 @@
 
 \chapter{Instruções de execução}\label{apendice:execucao}
 
-\todo{Requisitos (versão do Python/Java), como executar as versões sequencial, paralela e distribuída, parâmetros de linha de comando e como reproduzir os experimentos.}
+O código está no repositório do grupo (\url{https://github.com/vinicius-10/FakeNews-Distribuidos}) e foi executado no Windows~11 e no Linux, com o mesmo comando nos dois sistemas. O único requisito é o Python~3.12 (CPython): a simulação usa apenas a biblioteca padrão. Duas bibliotecas são opcionais e usadas só nos experimentos, fora do cálculo das gerações: o \texttt{matplotlib}~\cite{Hunter2007}, que desenha os gráficos, e o \texttt{psutil}, que informa o número de núcleos físicos. Todos os comandos são executados na pasta raiz do repositório.
+
+\section{Execução das versões}
+
+As três versões aceitam os mesmos parâmetros da simulação: \texttt{-{}-linhas}, \texttt{-{}-colunas}, \texttt{-{}-geracoes}, \texttt{-{}-percentual} (fração inicial de espalhadores), \texttt{-{}-limiar} e \texttt{-{}-semente}, com os mesmos valores padrão do código original ($100 \times 100$, 50~gerações, 5\%, limiar~3 e semente~42). As melhorias são ligadas pelas opções \texttt{-{}-resistencia MIN MAX}, \texttt{-{}-bots FRACAO}, \texttt{-{}-estatisticas PASTA}, \texttt{-{}-animacao arquivo.html} e, na distribuída, \texttt{-{}-bits}.
+
+{\small
+\begin{verbatim}
+# sequencial refatorada
+python -m sequencial.fakenews_sequencial \
+    --linhas 500 --colunas 500 --limiar 2
+
+# paralela com 8 processos (ou --modo threads)
+python -m paralelo.fakenews_paralelo \
+    --linhas 1000 --colunas 1000 --limiar 2 --trabalhadores 8
+
+# distribuida numa maquina so (4 workers em localhost)
+python -m distribuido.executar_local --workers 4 \
+    --linhas 1000 --colunas 1000 --limiar 2
+
+# distribuida entre maquinas: o coordenador numa delas...
+python -m distribuido.coordenador --host 0.0.0.0 \
+    --porta 5000 --workers 3 --linhas 2000 --colunas 2000 --limiar 2
+# ... e um worker em cada maquina, com o IP do coordenador
+python -m distribuido.worker \
+    --coordenador 192.168.0.10:5000 --escutar 0.0.0.0
+\end{verbatim}
+}
+
+\section{Testes e experimentos}
+
+{\small
+\begin{verbatim}
+# testes automaticos (comparam com o codigo original)
+python -m unittest discover -s testes -v
+
+# bateria de medicao, tabelas e perfil por worker
+python -m experimentos.medir --tamanhos 1000 2000 \
+    --workers 1 2 4 8 16
+python -m experimentos.analisar
+python -m experimentos.perfis
+\end{verbatim}
+}
+
+As instruções completas, inclusive a lista de baterias e o roteiro do teste entre três máquinas, estão nos arquivos \texttt{README.md}, \texttt{experimentos/README.md} e \texttt{distribuido/rede/LEIA-ME-3-maquinas.md} do repositório.
 
 \section{Uso de inteligência artificial generativa e código externo}
 
 Conforme exigido no enunciado do trabalho, registra-se aqui toda utilização de IA generativa, código externo e bibliotecas adicionais.
 
-\todo{Listar ferramenta, versão, finalidade e partes do trabalho em que foi usada.}
+Foram usadas duas ferramentas de IA generativa, ambas como assistentes de programação e de redação, listadas no Quadro~\ref{quad:uso-ia}. Todo o conteúdo produzido com elas foi revisado pelos integrantes, que executaram os testes e conferiram os resultados antes de integrá-lo ao repositório. No repositório, os \textit{commits} feitos com auxílio de IA estão marcados com a linha \texttt{Co-Authored-By}, e cada \textit{pull request} registra a ferramenta usada.
+
+\begin{tabframed}[!htb]
+    \caption{Uso de inteligência artificial generativa no trabalho}
+    \label{quad:uso-ia}
+    \centering
+    \footnotesize
+    \begin{tabular}{|p{3.2cm}|p{11cm}|}
+        \hline
+        \textbf{Ferramenta} & \textbf{Finalidade e partes do trabalho} \\
+        \hline
+        Claude Code, com o modelo Claude Opus~5.5~\cite{AnthropicClaudeCode} & Escrita do núcleo comum, da versão sequencial refatorada, das versões paralela e distribuída, das seis melhorias e dos testes de equivalência; testes complementares e correções do coordenador; script de custo da versão sequencial; verificação e medições no Linux; busca de artigos e conferência de metadados das referências; redação e revisão de trechos deste relatório (Seções~\ref{cap:introducao}, \ref{cap:sequencial}, \ref{cap:distribuida}, \ref{cap:melhorias} e~\ref{cap:experimentos}) e da documentação do repositório. \\
+        \hline
+        DeepSeek Harness~\cite{DeepSeek} & Revisão de código, correções de robustez e otimização da versão paralela; scripts de medição e de análise dos experimentos; bateria que varia o percentual de espalhadores e o limiar. \\
+        \hline
+    \end{tabular}
+    \fonte{}
+    \addcontentsline{loge}{tabframed}{\protect\numberline{\thetabframed}Uso de inteligência artificial generativa no trabalho}
+\end{tabframed}
+
+O único código externo é a versão sequencial fornecida na disciplina (\texttt{sequencial/fakenews\_sequencial\_original.py}), mantida sem alterações: as versões novas importam dela a função \texttt{criar\_grade} e as constantes dos estados, para gerar exatamente a mesma grade inicial, e os testes a usam como referência. Fora o \texttt{matplotlib} e o \texttt{psutil}, opcionais e restritos aos experimentos, todas as bibliotecas usadas são da biblioteca padrão do Python, entre elas \texttt{multiprocessing}~\cite{PythonMultiprocessing,PythonSharedMemory} e \texttt{socket}~\cite{PythonSocket}; nenhuma delas é usada para paralelizar o cálculo de forma implícita.

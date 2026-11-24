@@ -2,15 +2,23 @@
 
 \chapter{Conclusões}\label{cap:conclusoes}
 
-\todo{Síntese dos resultados: o que foi obtido em \textit{speedup}/eficiência e por quê.}
+Este trabalho transformou a simulação sequencial de propagação de \textit{fake news} fornecida na disciplina em uma versão paralela, com processos e memória compartilhada, e em uma versão distribuída, com \textit{sockets} e troca de \textit{halo} entre os processos. As três versões usam o mesmo núcleo de cálculo e o mesmo estado inicial e produzem exatamente as mesmas grades que o código original, geração a geração, o que foi verificado por testes automáticos no Windows e no Linux e, em escala, pelo resumo SHA-256 da grade final em todas as execuções dos experimentos.
+
+O primeiro ganho veio antes do paralelismo: a grade compacta, sem a cópia a cada geração, tornou a versão sequencial de 3,2 a 3,5 vezes mais rápida que o código original (Seção~\ref{sec:melhoria-grade}). Sobre essa referência, na Máquina~A, a versão paralela chegou a um \textit{speedup} de 10,9 com 24~processos, e a distribuída, executada em \textit{localhost}, a 12,2 com 24~\textit{workers}, na grade de $2000 \times 2000$. Nas grades de $1000 \times 1000$ e $2000 \times 2000$, a eficiência ficou entre 0,82 e 1,14 com até oito unidades de processamento e caiu para cerca de 0,5 com 24. O perfil de tempo por \textit{worker} mostrou que essa queda vem principalmente da espera nas barreiras, que chegou a quase um quinto do tempo com 16~\textit{workers}, e não da comunicação, que ficou abaixo de 2,5\% do tempo em \textit{localhost}. O modo com \textit{threads} não teve ganho, por causa do \ac{GIL}, e a mesma bateria num \textit{notebook} com Linux escalou bem menos, com \textit{speedup} máximo em torno de 4,5 (Seção~\ref{sec:comparacao-maquinas}).
+
+As melhorias do modelo mostraram efeitos opostos sobre a propagação: com limiares individuais entre 1 e 3, de mesma média que o modelo base, o alcance subiu de 57,90\% para 75,26\%, e 2\% de \textit{bots} o elevaram a 93,19\%; numa população resistente, com limiares entre 3 e 5, o alcance ficou abaixo de 8\%, mesmo com \textit{bots} (Seção~\ref{cap:melhorias}).
 
 \section{Dificuldades encontradas}
 
-\todo{}
+A principal restrição foi o \ac{GIL} do Python, que impede o ganho com \textit{threads} em cálculos limitados pelo processador e obrigou o uso de processos, com memória compartilhada explícita. Mesmo com processos, a primeira versão paralela, que calculava diretamente sobre a memória compartilhada, ficava mais lenta que a sequencial com um \textit{worker}, porque o acesso célula a célula à memória compartilhada é mais lento que a um vetor local; a solução foi calcular sobre uma janela local copiada da grade (Seção~\ref{sec:memoria-paralela}).
+
+Na versão distribuída, foi preciso tratar o fato de o \ac{TCP} entregar um fluxo de \textit{bytes}, e não mensagens, o que levou ao cabeçalho com o tamanho de cada mensagem, e evitar o \textit{deadlock} na troca de fronteiras, resolvido com a ordem par e ímpar (Seção~\ref{sec:protocolo-distribuida}). A execução entre máquinas trouxe problemas que não aparecem em \textit{localhost}: o \textit{firewall} do Windows não filtra conexões locais e, por isso, os testes numa única máquina passavam mesmo quando a configuração da rede impedia a conexão entre máquinas; e uma conexão de teste de porta derrubava o coordenador, até que conexões que não são de \textit{workers} passassem a ser descartadas.
+
+O grupo usa Windows e Linux, e todo o código precisou rodar sem alterações nos dois sistemas, o que exigiu, entre outros cuidados, criar os processos explicitamente pelo método \textit{spawn}. Nos experimentos, o limiar~3 do código original faz a propagação terminar em cerca de três gerações, curto demais para medir, e por isso as medições usaram o limiar~2. Os processadores híbridos, com núcleos de desempenho e de eficiência, também dificultaram a interpretação da eficiência acima do número de núcleos de desempenho.
 
 \section{Trabalhos futuros}
 
-\todo{}
+A divisão da grade é estática e igual para todos, embora o custo de cada faixa mude ao longo da simulação, pois as células que já não são ignorantes custam menos; um balanceamento dinâmico de carga poderia reduzir a espera nas barreiras, que foi a principal causa da perda de eficiência. Na versão distribuída, podem ser avaliadas as estratégias comparadas por \citeonline{Giordano2019}: a divisão em blocos bidimensionais, que reduz a fronteira de cada parte quando há muitos nós, a sobreposição da comunicação com o cálculo do interior de cada faixa e o uso de fronteiras mais largas, trocadas com menos frequência. Com a compilação do Python sem o \ac{GIL}, disponível a partir da versão 3.13~\cite{Gross2023}, o modo com \textit{threads} poderia ser medido novamente. No modelo, outras extensões possíveis são várias notícias concorrentes, agentes que checam fatos e contradizem os espalhadores e indivíduos mais influentes que os demais.
 
 \section{Contribuição individual dos integrantes}
 
@@ -18,13 +26,17 @@
     \centering
     \caption{Contribuição de cada integrante}
     \label{tab:contribuicoes}
-    \begin{tabular}{lp{10cm}}
+    \begin{tabular}{p{4cm}p{10.5cm}}
         \toprule
         \textbf{Integrante} & \textbf{Contribuição} \\
         \midrule
-        \todo{Nome} & \todo{} \\
-        \todo{Nome} & \todo{} \\
-        \todo{Nome} & \todo{} \\
+        Arthur Henrique Jardim da Cunha Pinto & \todo{Contribuição do Arthur (não há \textit{commits} dele no repositório).} \\
+        \midrule
+        João Alberto Benaci Torezan & Núcleo comum, versão sequencial refatorada, versões paralela e distribuída, as seis melhorias e os testes de equivalência; referências de acesso aberto; verificação e medições no Linux; revisão da bateria de parâmetros; Seções~\ref{cap:distribuida} e~\ref{cap:melhorias}, motivação da introdução, comparação entre máquinas e apêndice. \\
+        \midrule
+        Rafael Munhoz Castro & Experimentos de desempenho (medição, análise, perfil por \textit{worker}, efeito das melhorias do modelo e bateria de percentual e limiar) na Máquina~A; correções de robustez e otimização da versão paralela; roteiro e execução da versão distribuída entre três máquinas. \\
+        \midrule
+        Vinicius Souza Dias & Repositório, guia de contribuição e cópia do relatório; busca de artigos; testes complementares e correções da saída e do coordenador distribuído; análise de custo da versão sequencial; Seção~\ref{cap:sequencial}. \\
         \bottomrule
     \end{tabular}
     \fonte{}%% vazio = "Fonte: Autoria própria (ano)"

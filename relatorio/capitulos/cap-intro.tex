@@ -7,7 +7,11 @@ A disseminação de notícias falsas (\textit{fake news}) em redes sociais é um
 
 Este trabalho parte de uma simulação sequencial, escrita em Python e fornecida na disciplina, em que a população é representada por uma matriz bidimensional e cada indivíduo assume um de três estados (ignorante, espalhador ou inativo), com propagação local pela vizinhança de Moore. O objetivo é transformar essa aplicação em versões paralela e distribuída, preservando o comportamento lógico da versão original, e avaliar o desempenho obtido.
 
-\todo{Completar a motivação com 1--2 parágrafos e referências.}
+A relevância do tema aparece nos dados de redes sociais. \citeonline{Vosoughi2018} analisaram a difusão de notícias verdadeiras e falsas no Twitter e observaram que as falsas se espalharam mais longe, mais rápido e para mais pessoas que as verdadeiras, e \citeonline{Shao2018} mostraram que contas automatizadas (\textit{bots}) tiveram papel desproporcional na circulação de conteúdo de baixa credibilidade. Como a propagação depende do contato entre pessoas próximas e de quantas vezes cada uma é exposta à notícia, modelos de boato e de limiar~\cite{DaleyKendall1964,Granovetter1978} podem ser simulados como um autômato celular, em que cada célula representa uma pessoa e muda de estado conforme os seus vizinhos (Seção~\ref{cap:fundamentacao}).
+
+O custo dessa simulação cresce com o número de células e de gerações. No código fornecido, cada célula custa cerca de 0,82~$\mu$s por geração (Seção~\ref{sec:custo-sequencial}), de modo que uma grade de $2000 \times 2000$, com quatro milhões de pessoas, leva mais de 3~s por geração, e o estudo do efeito dos parâmetros, como o percentual inicial de espalhadores e o limiar de convencimento, exige repetir a simulação muitas vezes. Como o novo estado de cada célula depende apenas da geração anterior e dos vizinhos imediatos, a grade pode ser dividida entre vários processadores, que calculam as suas partes ao mesmo tempo e trocam apenas as fronteiras~\cite{Foster1995}. Em Python, essa divisão precisa ser feita com processos, e não com \textit{threads}, por causa da trava global do interpretador (Seção~\ref{sec:computacao-paralela}), e, entre máquinas, com troca de mensagens pela rede.
+
+Além das versões paralela e distribuída, o trabalho propõe seis melhorias: duas de desempenho, duas que ampliam a observação da simulação e duas que aproximam o modelo de fenômenos descritos na literatura, a resistência individual à notícia e a presença de \textit{bots}.
 
 \section{Objetivos}
 

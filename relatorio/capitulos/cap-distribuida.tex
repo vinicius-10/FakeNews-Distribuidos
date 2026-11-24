@@ -2,22 +2,130 @@
 
 \chapter{Versão distribuída}\label{cap:distribuida}
 
-\section{Arquitetura}
+Esta seção descreve a versão distribuída da simulação, implementada na pasta \texttt{distribuido/}. Assim como a versão paralela, ela usa o núcleo de cálculo da versão sequencial refatorada (Seção~\ref{sub:sequencial-refatorada}) e a mesma divisão da grade em faixas de linhas; a diferença é que os processos não compartilham memória e trocam todos os dados por mensagens, o que permite executá-los em máquinas diferentes. A Seção~\ref{sec:arquitetura-distribuida} apresenta a arquitetura; a Seção~\ref{sec:divisao-distribuida}, a divisão da matriz e as linhas de \textit{halo}; a Seção~\ref{sec:protocolo-distribuida}, o protocolo de comunicação; a Seção~\ref{sec:sincronizacao-distribuida}, a sincronização entre as gerações e o tratamento de falhas; e a Seção~\ref{sec:verificacao-distribuida}, a verificação de que o resultado é igual ao do código original.
 
-\todo{Coordenador e \textit{workers}; tecnologia (\textit{sockets} TCP ou RMI); diagrama da arquitetura.}
+\section{Arquitetura}\label{sec:arquitetura-distribuida}
 
-\section{Divisão da matriz entre processos}
+A comunicação foi implementada com \textit{sockets} da biblioteca padrão do Python~\cite{PythonSocket}, sobre o protocolo \ac{TCP}. Optou-se por \textit{sockets}, e não por \ac{RMI}, porque a biblioteca padrão do Python não oferece invocação remota de métodos e porque o controle direto das mensagens permite enviar as linhas da grade como uma sequência de \textit{bytes}, sem conversão. O \ac{TCP} garante que os dados chegam completos e na ordem em que foram enviados em cada conexão, propriedade usada na sincronização das gerações (Seção~\ref{sec:sincronizacao-distribuida}).
 
-\todo{Faixas de linhas por processo; linhas fantasmas (\textit{halo}) acima e abaixo.}
+A execução envolve dois papéis, mostrados na Figura~\ref{fig:arquitetura-distribuida}. O coordenador (\texttt{distribuido/coordenador.py}) é um único processo, que aceita a conexão dos $P$ \textit{workers}, gera a grade inicial uma única vez, com a função \texttt{criar\_grade} do código original e a semente 42, envia a cada \textit{worker} apenas a sua faixa, soma as contagens de estados a cada geração, imprime o andamento e decide quando a simulação termina. Cada \textit{worker} (\texttt{distribuido/worker.py}) guarda somente a sua faixa, calcula as gerações sobre ela e troca as linhas de fronteira com os \textit{workers} vizinhos. Como nenhum \textit{worker} sorteia valores, todos partem do mesmo estado inicial que o código original.
 
-\section{Protocolo de comunicação}
+\begin{figure}[!htb]
+    \caption{Arquitetura da versão distribuída com quatro \textit{workers}}
+    \label{fig:arquitetura-distribuida}
+    \centering
+    \begin{tikzpicture}[x=1cm, y=1cm, font=\footnotesize,
+            no/.style={draw, align=center, minimum width=2.6cm, minimum height=1.0cm}]
+        \node[no, minimum width=11.6cm] (coord) at (4.5, 3) {Coordenador\\gera a grade, soma as contagens, decide a parada};
+        \node[no] (w0) at (0, 0) {\textit{Worker} 0\\linhas do topo};
+        \node[no] (w1) at (3, 0) {\textit{Worker} 1};
+        \node[no] (w2) at (6, 0) {\textit{Worker} 2};
+        \node[no] (w3) at (9, 0) {\textit{Worker} 3\\linhas da base};
+        \foreach \x in {0, 3, 6, 9} {\draw[<->, thick] (\x, 2.5) -- (\x, 0.5);}
+        \draw[<->, thick, dashed] (w0.east) -- (w1.west);
+        \draw[<->, thick, dashed] (w1.east) -- (w2.west);
+        \draw[<->, thick, dashed] (w2.east) -- (w3.west);
+        \node[align=center] at (4.5, 1.5) {faixa inicial,\\contagens e\\decisão de parada};
+        \node at (4.5, -0.95) {linhas de \textit{halo} trocadas diretamente entre vizinhos (tracejado)};
+    \end{tikzpicture}
+    \fonte{}
+    \addcontentsline{loge}{figure}{\protect\numberline{\thefigure}Arquitetura da versão distribuída com quatro \textit{workers}}
+\end{figure}
 
-\todo{Formato das mensagens; troca de fronteiras a cada geração; serialização; diagrama de sequência.}
+As linhas de fronteira não passam pelo coordenador: os \textit{workers} formam uma cadeia, do \textit{worker}~0, com as linhas do topo da grade, ao \textit{worker}~$P-1$, com as da base, e cada um se conecta diretamente aos seus vizinhos. Se as fronteiras passassem pelo coordenador, ele receberia e reenviaria $2(P-1)$ linhas a cada geração e se tornaria um ponto serial pelo qual toda a comunicação teria de passar. Ao coordenador chegam apenas as contagens de cada faixa, de tamanho fixo.
 
-\section{Sincronização e consistência das gerações}
+O endereço e a porta do coordenador são definidos por argumentos de linha de comando (por padrão, \texttt{127.0.0.1} e a porta 5000; o endereço \texttt{0.0.0.0} aceita conexões de outras máquinas), e cada \textit{worker} recebe o endereço do coordenador e o endereço em que espera a conexão do seu vizinho. Para testes e demonstrações numa única máquina, o programa \texttt{distribuido/executar\_local.py} cria os $P$ \textit{workers} como processos, pelo método \textit{spawn}, e executa o coordenador no processo principal, com toda a comunicação pela interface local (\textit{localhost}). Nesse modo, o caminho percorrido pelas mensagens é o mesmo de uma execução entre máquinas, mas sem a latência de uma rede física.
 
-\todo{Como se garante que todos estão na mesma geração; redução global do número de espalhadores para o critério de parada.}
+\section{Divisão da matriz entre processos}\label{sec:divisao-distribuida}
 
-\section{Verificação de correção}
+A grade é dividida pela mesma função \texttt{dividir\_em\_faixas} da versão paralela (Seção~\ref{sec:divisao-paralela}): o \textit{worker}~$k$ recebe uma faixa horizontal de linhas contíguas, e os tamanhos das faixas diferem em no máximo uma linha. A diferença está em onde as linhas ficam. Na versão paralela, a grade inteira está em memória compartilhada; na distribuída, cada \textit{worker} guarda apenas um vetor de $(h+2) \cdot C$ \textit{bytes}, em que $h$ é o número de linhas da sua faixa e $C$ é o número de colunas. As linhas~1 a $h$ desse vetor são as da faixa, e as linhas~0 e $h+1$ são as células fantasmas, ou linhas de \textit{halo} (Seção~\ref{sec:computacao-paralela}): a de cima recebe a última linha do vizinho de cima, e a de baixo, a primeira linha do vizinho de baixo. Esse vetor tem a mesma forma da janela local da versão paralela (Figura~\ref{fig:faixas-paralela}), com a diferença de que as linhas de \textit{halo} chegam por mensagem.
 
-\todo{Comparação célula a célula com a versão sequencial.}
+No \textit{worker}~0 e no \textit{worker}~$P-1$, a linha de \textit{halo} sem vizinho permanece com zeros e faz o papel da moldura da versão sequencial refatorada, isto é, da borda fixa do código original. Assim, a função \texttt{calcular\_faixa} do núcleo comum é usada sem alteração: ela não distingue uma linha de moldura de uma linha recebida de um vizinho. Cada \textit{worker} mantém dois desses vetores, alternados entre as gerações (\textit{double buffering}), e por isso ocupa $2(h+2)C$ \textit{bytes}; a grade completa existe apenas no coordenador, que a monta no início e no fim da execução.
+
+Ao contrário da versão paralela, a distribuída recusa uma execução com mais \textit{workers} que linhas. Um \textit{worker} com faixa vazia ficaria entre dois vizinhos sem ter uma linha própria para enviar a eles, e a cadeia de troca de fronteiras se romperia; por isso, o coordenador valida o número de \textit{workers} antes de aceitar as conexões.
+
+\section{Protocolo de comunicação}\label{sec:protocolo-distribuida}
+
+O \ac{TCP} entrega um fluxo contínuo de \textit{bytes}, e não mensagens separadas: uma leitura pode devolver apenas parte do que foi enviado, ou o fim de uma mensagem junto com o início da seguinte~\cite{PythonSocket}. Por isso, toda mensagem do protocolo, definido em \texttt{distribuido/protocolo.py}, começa com um cabeçalho de 5~\textit{bytes}: 1~\textit{byte} com o tipo da mensagem e 4~\textit{bytes} com o tamanho da carga, em ordem de rede (\textit{big-endian}). O receptor lê o cabeçalho e repete a leitura até completar exatamente o número de \textit{bytes} anunciado. Uma carga anunciada acima de 256~MiB é recusada, para que um cabeçalho corrompido não leve o receptor a reservar uma quantidade absurda de memória.
+
+As linhas da grade são enviadas como \textit{bytes}, exatamente como estão na memória, um \textit{byte} por célula, sem serialização. \citeonline{Dalcin2011} mostram que, na comunicação entre processos em Python, enviar objetos serializados custa bem mais que enviar \textit{buffers} de \textit{bytes} contíguos. As contagens de estados viajam como quatro inteiros sem sinal de 8~\textit{bytes}, e apenas as mensagens de configuração, trocadas uma vez por execução, usam o formato JSON. Além disso, todas as conexões desativam o algoritmo de Nagle (opção \texttt{TCP\_NODELAY}), que reteria as mensagens pequenas, como as contagens, à espera de mais dados e acrescentaria latência a cada geração. O Quadro~\ref{quad:mensagens-distribuida} lista as mensagens do protocolo.
+
+\begin{tabframed}[!htb]
+    \caption{Mensagens do protocolo da versão distribuída}
+    \label{quad:mensagens-distribuida}
+    \centering
+    \footnotesize
+    \begin{tabular}{|l|l|p{8.6cm}|}
+        \hline
+        \textbf{Mensagem} & \textbf{Sentido} & \textbf{Conteúdo} \\
+        \hline
+        OLA & \textit{worker} $\rightarrow$ coordenador & JSON com a porta em que o \textit{worker} espera o vizinho de cima \\
+        INICIO & coordenador $\rightarrow$ \textit{worker} & JSON com a posição na cadeia (\textit{rank}), a faixa, os parâmetros e o endereço do vizinho de baixo \\
+        GRADE & coordenador $\rightarrow$ \textit{worker} & \textit{bytes} das linhas da faixa no estado inicial \\
+        LIMIARES & coordenador $\rightarrow$ \textit{worker} & limiares individuais da faixa, quando a melhoria de resistência está ligada \\
+        PRONTO & \textit{worker} $\rightarrow$ coordenador & vazia: o \textit{worker} já está conectado aos vizinhos \\
+        LARGADA & coordenador $\rightarrow$ \textit{worker} & vazia: todos estão prontos e a geração~1 pode começar \\
+        HALO & \textit{worker} $\leftrightarrow$ \textit{worker} & uma linha de fronteira, com 1 \textit{byte} ou 1 \textit{bit} por célula \\
+        CONTAGEM & \textit{worker} $\rightarrow$ coordenador & ignorantes, espalhadores, inativos e \textit{bots} da faixa \\
+        FAIXA & \textit{worker} $\rightarrow$ coordenador & \textit{bytes} da faixa: ao final e, quando a grade inteira é necessária (verificação ou animação), a cada geração \\
+        DECISAO & coordenador $\rightarrow$ \textit{worker} & 1~\textit{byte}: continuar ou parar \\
+        RESULTADO & \textit{worker} $\rightarrow$ coordenador & JSON com o tempo de cálculo, de comunicação e de espera do \textit{worker} \\
+        \hline
+    \end{tabular}
+    \fonte{}
+    \addcontentsline{loge}{tabframed}{\protect\numberline{\thetabframed}Mensagens do protocolo da versão distribuída}
+\end{tabframed}
+
+A execução tem três fases. Na preparação, cada \textit{worker} abre uma porta de escuta escolhida pelo sistema operacional, conecta-se ao coordenador e envia OLA com essa porta. O coordenador atribui as posições na cadeia pela ordem de chegada e envia a cada \textit{worker} as mensagens INICIO e GRADE; o endereço do vizinho de baixo é formado pelo endereço de onde esse vizinho se conectou e pela porta que ele anunciou. Cada \textit{worker} então se conecta ao vizinho de baixo, aceita a conexão do vizinho de cima e responde PRONTO; quando todos responderam, o coordenador envia LARGADA. Em seguida vêm as gerações, mostradas na Figura~\ref{fig:sequencia-distribuida}, e, por fim, cada \textit{worker} envia a sua faixa final e o seu perfil de tempo, com os quais o coordenador monta a grade final e as estatísticas.
+
+\begin{figure}[!htb]
+    \caption{Mensagens trocadas em uma geração, com dois \textit{workers}}
+    \label{fig:sequencia-distribuida}
+    \centering
+    \begin{tikzpicture}[x=1cm, y=1cm, font=\footnotesize]
+        \node[draw, minimum width=2.4cm, minimum height=0.7cm] (a) at (0, 0) {\textit{Worker} 0};
+        \node[draw, minimum width=2.4cm, minimum height=0.7cm] (b) at (4.5, 0) {\textit{Worker} 1};
+        \node[draw, minimum width=2.4cm, minimum height=0.7cm] (c) at (9, 0) {Coordenador};
+        \foreach \x in {0, 4.5, 9} {\draw[dashed, black!50] (\x, -0.35) -- (\x, -7.6);}
+        \draw[->, thick] (0, -0.9) -- node[above] {HALO (última linha)} (4.5, -1.3);
+        \draw[->, thick] (4.5, -1.8) -- node[above] {HALO (primeira linha)} (0, -2.2);
+        \node[draw, fill=white, align=center] at (0, -3.0) {calcula\\a faixa};
+        \node[draw, fill=white, align=center] at (4.5, -3.0) {calcula\\a faixa};
+        \draw[->, thick] (4.5, -3.9) -- node[pos=0.5, above] {CONTAGEM} (9, -4.0);
+        \draw[->, thick] (0, -4.5) -- node[pos=0.75, above] {CONTAGEM} (9, -4.7);
+        \node[draw, fill=white, align=center] at (9, -5.6) {soma as contagens\\e decide};
+        \draw[->, thick] (9, -6.5) -- node[pos=0.5, above] {DECISAO} (4.5, -6.7);
+        \draw[->, thick] (9, -7.0) -- node[pos=0.75, above] {DECISAO} (0, -7.3);
+    \end{tikzpicture}
+    \fonte{}
+    \addcontentsline{loge}{figure}{\protect\numberline{\thefigure}Mensagens trocadas em uma geração, com dois \textit{workers}}
+\end{figure}
+
+Em cada geração, cada \textit{worker} envia a sua primeira linha ao vizinho de cima e a sua última linha ao vizinho de baixo, recebe as linhas correspondentes nas suas linhas de \textit{halo}, calcula a próxima geração da faixa, envia a contagem de estados ao coordenador e espera a decisão. Para evitar um \textit{deadlock}, a ordem das operações depende da posição na cadeia: os \textit{workers} de posição par primeiro enviam e depois recebem, e os de posição ímpar primeiro recebem e depois enviam. Se dois vizinhos enviassem ao mesmo tempo e os \textit{buffers} do sistema operacional se enchessem, ambos ficariam bloqueados no envio, cada um esperando que o outro lesse; com a alternância, em cada par de vizinhos, um lado sempre está lendo enquanto o outro envia.
+
+Em volume, cada \textit{worker} envia por geração no máximo duas linhas de fronteira, de $C + 5$ \textit{bytes} cada (a carga mais o cabeçalho), e uma contagem de 37~\textit{bytes}. Na grade de $1000 \times 1000$, um \textit{worker} interno envia, portanto, 2\,047~\textit{bytes} por geração, independentemente do número de linhas da sua faixa. A melhoria de compactação das fronteiras em \textit{bits} reduz as linhas para $\lceil C/8 \rceil + 5$ \textit{bytes} (Seção~\ref{cap:melhorias}).
+
+\section{Sincronização e consistência das gerações}\label{sec:sincronizacao-distribuida}
+
+Sem memória compartilhada, não há um objeto de barreira como na versão paralela: a sincronização é feita pelas próprias mensagens, e cada geração continua correspondendo a um superpasso do modelo \ac{BSP} (Seção~\ref{sec:computacao-paralela}). A mensagem DECISAO funciona como a barreira global: o coordenador só a envia depois de receber a contagem de todas as faixas, e nenhum \textit{worker} começa a geração seguinte antes de recebê-la. Assim, quando um \textit{worker} inicia a geração $t+1$, todos os outros já concluíram a geração $t$. A troca de fronteiras acrescenta uma sincronização local: um \textit{worker} só calcula a sua faixa depois de receber as linhas de \textit{halo} dos vizinhos, que eles enviam apenas depois de receberem a decisão da geração anterior.
+
+A consistência das gerações também não depende de bloqueios (\textit{locks}). Dentro de cada \textit{worker}, o cálculo lê apenas o vetor da geração atual, que já contém as linhas de \textit{halo} recebidas, e escreve apenas no outro vetor; ao fim da geração, os dois trocam de papel sem cópia. Entre os processos, nenhuma memória é compartilhada, e o \ac{TCP} entrega as mensagens de cada conexão na ordem de envio, de modo que a linha de uma geração nunca é confundida com a de outra. Além disso, toda leitura indica o tipo de mensagem esperado, e uma mensagem de outro tipo, sinal de que um processo saiu de sincronia, é tratada como erro de protocolo.
+
+O critério de parada é calculado por redução global. Cada \textit{worker} conta os estados da sua faixa, e o coordenador soma as contagens recebidas, imprime a geração no mesmo formato do código original e decide continuar enquanto houver espalhadores (ou \textit{bots}, Seção~\ref{cap:melhorias}) e o número de gerações pedido não tiver sido atingido, o mesmo critério da versão sequencial. A decisão é enviada a todos os \textit{workers}, que saem do laço na mesma geração.
+
+Como os processos podem estar em máquinas diferentes, toda espera tem um limite de tempo, para que uma falha se torne um erro em vez de travar a execução. Toda leitura em \textit{socket} tem um limite de 600~s, configurável pela opção \texttt{-{}-timeout}. Uma conexão que não envia uma mensagem OLA válida em 10~s, como a de um verificador de portas, é descartada sem ocupar uma posição na cadeia. Cada tentativa de conexão de um \textit{worker} espera no máximo 5~s e é repetida por até 30~s, o que permite iniciar os \textit{workers} antes do coordenador. Quando um \textit{worker} cai ou deixa de responder, o coordenador interrompe a execução com uma mensagem que indica a operação, o \textit{worker}, a faixa e a geração em que a falha ocorreu.
+
+Por fim, o tempo total medido pelo coordenador começa depois que o último \textit{worker} se conecta. Numa execução entre máquinas, a espera pelas conexões corresponde ao tempo que as pessoas levam para iniciar os programas em cada máquina, e não a um custo do programa; o tempo do laço de gerações, usado nos experimentos, começa depois da mensagem LARGADA.
+
+\section{Verificação de correção}\label{sec:verificacao-distribuida}
+
+A verificação segue a mesma lógica da versão paralela (Seção~\ref{sec:verificacao-paralela}): como a regra é determinística e o estado inicial é gerado uma única vez, a versão distribuída deve produzir exatamente as mesmas grades que o código original, geração a geração. Nos testes, o coordenador recebe a faixa de cada \textit{worker} a cada geração e monta a grade inteira para compará-la, célula a célula, com a do código original. Os testes automáticos da versão distribuída cobrem:
+
+\begin{itemize}
+    \item a equivalência com o código original nos mesmos três cenários da versão paralela (grades de $23 \times 17$, $12 \times 30$ e $9 \times 1$), com 1, 2 e 3~\textit{workers}, com e sem a compactação das fronteiras em \textit{bits} (arquivo \texttt{testes/test\_equivalencia.py});
+    \item a equivalência com a versão sequencial refatorada quando as melhorias do modelo estão ligadas (\textit{bots}, resistência individual e as duas juntas), com 3~\textit{workers} e fronteiras em \textit{bits}, e a recusa de mais \textit{workers} que linhas;
+    \item o protocolo (\texttt{testes/test\_protocolo.py}): mensagens vazias, JSON e uma mensagem de cerca de 1~MB, que o \textit{socket} entrega em partes e precisa chegar inteira, além de conexão fechada no meio de uma mensagem e mensagem de tipo errado;
+    \item a robustez (\texttt{testes/test\_robustez.py}): conexões que não são de \textit{workers} (que fecham logo, enviam uma requisição HTTP, um tipo errado, um JSON inválido ou nada) são descartadas sem alterar o resultado nem as posições na cadeia; o tempo total não inclui a espera pelas conexões; e um \textit{worker} que cai ou para de responder gera um erro que indica a geração, sem travar o coordenador.
+\end{itemize}
+
+Os testes foram executados no Windows e no Linux, com o mesmo resultado. Em escala, todas as execuções da versão distribuída nos experimentos (Seção~\ref{cap:experimentos}) produziram uma grade final com o mesmo resumo SHA-256 das demais versões. A versão também foi executada entre três máquinas de uma rede local, com um \textit{worker} em cada uma, numa grade de $200 \times 200$ com limiar~2, e chegou às mesmas contagens finais da versão sequencial (17\,027 ignorantes e 22\,973 inativos, na geração 44). \todo{Incluir a medição de desempenho entre as três máquinas quando ela for feita.}

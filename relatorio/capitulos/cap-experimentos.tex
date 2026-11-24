@@ -4,20 +4,22 @@
 
 \section{Configuração experimental}
 
+Os experimentos de desempenho foram executados em duas máquinas, descritas na Tabela~\ref{tab:ambiente}: um computador de mesa com Windows (Máquina~A), em que foi feita a bateria principal, e um \textit{notebook} com Linux (Máquina~B), em que a mesma bateria foi repetida para comparação. Os resultados de cada máquina são apresentados separadamente: tempos de máquinas ou sistemas operacionais diferentes não são combinados num mesmo cálculo de \textit{speedup}. A análise de custo da Seção~\ref{sub:custo-medicoes} usou ainda uma terceira máquina, indicada naquela seção. Em todas as medições, a versão distribuída foi executada em uma única máquina, com os processos comunicando-se pela interface local (\textit{localhost}).
+
 \begin{table}[htb]
     \centering
     \caption{Ambiente de execução dos experimentos}
     \label{tab:ambiente}
-    \begin{tabular}{ll}
+    \begin{tabular}{lp{5cm}p{5cm}}
         \toprule
-        \textbf{Item} & \textbf{Valor} \\
+        \textbf{Item} & \textbf{Máquina A (Windows)} & \textbf{Máquina B (Linux)} \\
         \midrule
-        Processador & \todo{} \\
-        Núcleos físicos / lógicos & \todo{} \\
-        Memória RAM & \todo{} \\
-        Sistema operacional & \todo{} \\
-        Linguagem e versão & \todo{} \\
-        Ambiente de execução & \todo{} \\
+        Processador & Intel Core i9-12900F & Intel Core i5-1240P \\
+        Núcleos físicos / lógicos & 16 (8 de desempenho e 8 de eficiência) / 24 & 12 (4 de desempenho e 8 de eficiência) / 16 \\
+        Memória RAM & 31,8~GB & 15,3~GB \\
+        Sistema operacional & Windows~11 & Fedora Linux~44 (\textit{kernel} 7.3.3) \\
+        Linguagem e versão & Python~3.11.7 (CPython) & Python~3.12.16 (CPython) \\
+        Ambiente de execução & computador de mesa ligado na tomada, demais programas fechados & \textit{notebook} ligado na tomada, política de frequência do processador em \texttt{performance} \\
         \bottomrule
     \end{tabular}
     \fonte{}%% vazio = "Fonte: Autoria própria (ano)"
@@ -25,7 +27,11 @@
 
 \section{Cenários avaliados}
 
-\todo{Tamanhos de matriz, número de gerações, percentual inicial de espalhadores, limiar, número de \textit{threads} e de processos/\textit{hosts}; número de repetições e estatística usada (média, desvio padrão).}
+As medições foram feitas por scripts do repositório (\texttt{experimentos/medir.py} e \texttt{experimentos/analisar.py}), e nenhuma tabela foi preenchida à mão. A bateria principal usou grades quadradas de $1000 \times 1000$ e $2000 \times 2000$ (e de $500 \times 500$ apenas para as versões sequenciais), com 20~gerações, 5\% de espalhadores iniciais e limiar~2, e mediu seis versões: o código original, a sequencial refatorada, a paralela com processos, a paralela com \textit{threads} e a distribuída em \textit{localhost}, com e sem a compactação das fronteiras em \textit{bits}. As versões paralelas e distribuídas foram executadas com 1, 2, 4, 8, 16 e 24 unidades de processamento na Máquina~A e com 1, 2, 4, 8, 12 e 16 na Máquina~B. O limiar~3 do código original não foi usado porque, com ele, a propagação termina em cerca de três gerações (Tabela~\ref{tab:custo-limiar}), o que não deixa tempo para medir.
+
+Cada configuração foi executada uma vez para aquecimento, com o resultado descartado, e depois repetida ao menos cinco vezes; na Máquina~A, o código original, por ser o mais lento, e a grade de $500 \times 500$ foram repetidos três vezes. Reporta-se a mediana do tempo do laço de gerações, menos sensível que a média a execuções perturbadas pelo sistema operacional, acompanhada do desvio padrão, e o \textit{speedup} é calculado contra a sequencial refatorada da mesma máquina, cujo tempo absoluto é informado junto, como recomendam \citeonline{HoeflerBelli2015}. O tempo do laço começa depois que a grade inicial foi gerada e, nas versões paralela e distribuída, depois que os processos e as conexões foram criados; o tempo total, que inclui essa preparação, é registrado à parte. Toda execução grava o resumo SHA-256 da grade final, e a análise confere que ele é igual em todas as versões, de modo que cada bateria também funciona como um teste de equivalência em escala. O perfil de tempo por \textit{worker} foi coletado em execuções separadas, com a melhoria de estatísticas ligada (Seção~\ref{sec:melhoria-estatisticas}).
+
+\todo{Acrescentar os cenários das baterias finais: variação do percentual de espalhadores, do limiar e do número de gerações, e a execução entre três máquinas.}
 
 \section{Resultados da versão paralela}
 
@@ -34,6 +40,43 @@
 \section{Resultados da versão distribuída}
 
 \todo{Tabela de tempos, gráficos de \textit{speedup} e eficiência; tempo de comunicação vs. cômputo.}
+
+\section{Comparação entre as duas máquinas}\label{sec:comparacao-maquinas}
+
+Para verificar se o comportamento observado depende da máquina e do sistema operacional, a bateria da grade de $1000 \times 1000$ foi repetida na Máquina~B, com Linux, usando os mesmos parâmetros: 20~gerações, 5\% de espalhadores, limiar~2, uma execução de aquecimento descartada e cinco repetições, das quais se reporta a mediana do tempo do laço de gerações. A Tabela~\ref{tab:comparacao-maquinas} mostra os tempos e o \textit{speedup} de cada máquina, sempre calculado contra a sequencial refatorada da própria máquina. Na Máquina~A, o código fornecido foi medido com três repetições, por ser o mais lento.
+
+\begin{table}[htb]
+    \centering
+    \caption{Tempo do laço e \textit{speedup} na grade de $1000 \times 1000$ em cada máquina}
+    \label{tab:comparacao-maquinas}
+    \begin{tabular}{lrrrrr}
+        \toprule
+        & & \multicolumn{2}{c}{\textbf{Máquina A (Windows)}} & \multicolumn{2}{c}{\textbf{Máquina B (Linux)}} \\
+        \textbf{Versão} & \textbf{\textit{Workers}} & \textbf{Tempo (s)} & \textbf{\textit{Speedup}} & \textbf{Tempo (s)} & \textbf{\textit{Speedup}} \\
+        \midrule
+        Sequencial (fornecida)  & 1  & 16,46 & 0,30 & 14,40 & 0,31 \\
+        Sequencial (refatorada) & 1  & 4,94  & 1,00 & 4,50  & 1,00 \\
+        \midrule
+        Paralela (processos)    & 1  & 4,97  & 0,99 & 4,76  & 0,95 \\
+                                & 2  & 2,22  & 2,23 & 2,54  & 1,77 \\
+                                & 4  & 1,16  & 4,25 & 1,57  & 2,86 \\
+                                & 8  & 0,71  & 6,94 & 1,22  & 3,68 \\
+                                & 16 & 0,51  & 9,61 & 1,02  & 4,42 \\
+        Paralela (\textit{threads}) & 8 & 5,30 & 0,93 & 4,85 & 0,93 \\
+        \midrule
+        Distribuída (\textit{localhost}) & 1  & 4,97 & 0,99 & 4,82 & 0,93 \\
+                                & 2  & 2,17  & 2,27 & 2,64  & 1,70 \\
+                                & 4  & 1,19  & 4,16 & 1,58  & 2,85 \\
+                                & 8  & 0,73  & 6,74 & 1,25  & 3,59 \\
+                                & 16 & 0,53  & 9,30 & 1,01  & 4,45 \\
+        \bottomrule
+    \end{tabular}
+    \fonte{}
+\end{table}
+
+Nas duas máquinas, todas as execuções produziram a mesma grade final, conferida pelo resumo SHA-256 da grade: na Máquina~B foram 130~medições, todas idênticas à sequencial. A suíte de testes automatizados do projeto também passou nos dois sistemas operacionais, sem alteração no código: na Máquina~B, os 76~testes da versão final passaram com Python~3.12.16 e 3.14.10; na Máquina~A, a suíte passou com Python~3.11.7 e 3.12.10, quando ainda tinha 72~testes. O ganho da sequencial refatorada sobre o código fornecido foi semelhante nas duas máquinas (3,3$\times$ na Máquina~A e 3,2$\times$ na Máquina~B), e as \textit{threads} não trouxeram ganho em nenhuma delas (\textit{speedup} entre 0,88 e 0,99 na Máquina~B, para 1 a 16 \textit{threads}), pelo efeito do \ac{GIL}.
+
+A escalabilidade, por outro lado, foi bem menor na Máquina~B. Com quatro \textit{workers}, a eficiência já caiu para 0,71, contra 1,06 na Máquina~A, e o \textit{speedup} parou de crescer entre 12 e 16 \textit{workers}, em torno de 4,4 a 4,6, enquanto a Máquina~A chegou a 9,6 com 16 processos. O comportamento é coerente com a configuração da Máquina~B, que tem apenas quatro núcleos de desempenho, e com o limite de potência de um processador de \textit{notebook}: quando parte das faixas fica nos núcleos de eficiência, mais lentos, a faixa mais lenta passa a determinar o tempo de cada geração, pois todos os \textit{workers} se sincronizam ao fim dela. A medição não registrou em qual núcleo cada \textit{worker} executou, então essa explicação não foi confirmada diretamente. A diferença no tempo de um único núcleo (o código fornecido levou 14,40~s na Máquina~B e 16,46~s na Máquina~A) não pode ser atribuída só ao sistema operacional, pois as versões do Python também são diferentes (3.12 e 3.11).
 
 \section{Análise}
 
