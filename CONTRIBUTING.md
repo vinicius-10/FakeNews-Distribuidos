@@ -203,7 +203,7 @@ Exemplo: `feat(paralelo): divide a grade em faixas de linhas entre processos`.
 ## 🧪 Testes
 
 - Os testes ficam em `testes/` e rodam com
-  `python -m unittest discover -s testes -v` (56 testes, ~15 s). Só a biblioteca padrão, para
+  `python -m unittest discover -s testes -v` (76 testes, alguns segundos). Só a biblioteca padrão, para
   funcionar igual em todas as máquinas. A lista de arquivos e o que cada um cobre está no README.
 - **Teste de equivalência:** as três versões, com grades pequenas e vários cenários (tamanhos,
   limiar, número de *workers*, divisão não exata das linhas), comparadas geração a geração com a
