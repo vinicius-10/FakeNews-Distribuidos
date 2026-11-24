@@ -1,0 +1,5 @@
+posicao,maquina,ip,ambiente,implementacao,memoria_gb,nucleos_fisicos,nucleos_logicos,processador,python,sistema
+0,notVini,192.168.0.39,medição em rede (agente),CPython,23.6,14,20,13th Gen Intel(R) Core(TM) i7-13650HX,3.12.10,Windows 11 (10.0.26300)
+1,PCrafa,192.168.0.4,medição em rede (agente),CPython,31.8,16,24,12th Gen Intel(R) Core(TM) i9-12900F,3.12.10,Windows 11 (10.0.26300)
+2,NoteBook_Arthur,192.168.0.16,medição em rede (agente),CPython,15.7,8,12,12th Gen Intel(R) Core(TM) i5-12450H,3.14.0,Windows 11 (10.0.26200)
+3,torezan-pc,192.168.0.20,notebook na tomada; Wi-Fi,CPython,15.3,12,16,12th Gen Intel(R) Core(TM) i5-1240P,3.12.16,Linux 7.3.3-200.fc44.x86_64 (#1 SMP PREEMPT_DYNAMIC Fri Nov  6 20:34:09 UTC 2026)

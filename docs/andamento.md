@@ -15,7 +15,7 @@ arquivo** (tabela, checklist e histórico) no mesmo PR.
 | Distribuída (sockets TCP) | ✅ feita e testada (localhost, interface de rede real e 3 máquinas) | [`distribuido/`](../distribuido/) |
 | Testes | ✅ 96 testes passando (Windows, Python 3.12.10, e Linux/WSL, Python 3.12.3): equivalência, protocolo, robustez, melhorias 2 e 3, saída, métricas, bateria, verificação da 3.4.2, medição em rede | [`testes/`](../testes/) |
 | 6 melhorias | ✅ implementadas · ✅ medidas · ✅ escritas no relatório (falta o resultado de `--bits` entre 3 máquinas) | [seção 5](#5-melhorias-escolhidas) |
-| Experimentos de desempenho | ✅ medidos no PC do grupo (Windows) e num notebook (Linux), em localhost · 🔄 rede real: conexão ok em 3 máquinas, bateria de 4 máquinas pronta (`medir_rede.py`), falta rodar · 🔄 bateria de percentual × limiar: refazer com 5 repetições | [`experimentos/`](../experimentos/) |
+| Experimentos de desempenho | ✅ medidos no PC do grupo (Windows) e num notebook (Linux), em localhost · ✅ rede real: bateria em 4 máquinas medida (`resultados/rede/`), falta analisar · 🔄 bateria de percentual × limiar: refazer com 5 repetições | [`experimentos/`](../experimentos/) |
 | Relatório (Overleaf) | 🔄 introdução, fundamentação, sequencial, paralela, distribuída e melhorias escritas; experimentos com ambiente e comparação entre máquinas; resto de experimentos, conclusão e apêndice com `\todo` | [`relatorio/`](../relatorio/) (cópia) |
 | Slides (PDF) | ❌ não começados | — |
 | Vídeo 10–15 min | ❌ não gravado | — |
@@ -287,11 +287,14 @@ onde cada um marca as suas tarefas.
       deu o mesmo resultado da sequencial (17.027 ignorantes e 22.973 inativos na geração 44).
       Tempo do laço 1,07 s, contra 0,36 s da sequencial: com grade pequena a rede domina
       (~24 ms por geração);
-    - [ ] **medir** entre 4 máquinas (Vinicius, Rafael, Arthur e João): script pronto
+    - [x] **medir** entre 4 máquinas (Vinicius, Rafael, Arthur e João): script pronto
       (`experimentos/medir_rede.py` + `distribuido/agente.py`, roteiro em
       [`ROTEIRO-medicao-4-maquinas.md`](../distribuido/rede/ROTEIRO-medicao-4-maquinas.md)):
       sequencial em cada máquina, 1 a 4 máquinas × 1/2/4 *workers* em 1000² e 2000², 4000² e
-      `--bits` com as 4, gerações 10/20/40 e percentual × limiar; ~40 min. Falta rodar;
+      `--bits` com as 4, gerações 10/20/40 e percentual × limiar. Medido em 23 nov. (21:51–22:06
+      a rede, Wi-Fi): 147 linhas nas fases 2 e 3, todas iguais à sequencial; fase 1 com as 4
+      máquinas. No notVini e no NoteBook_Arthur o perfil de energia foi trocado durante a fase 1
+      (afeta só o tempo da sequencial dessas duas). Falta analisar e pôr no relatório;
     - [x] coordenador: o `tempo_total` começa depois que o último *worker* conecta (antes
       incluía a espera, 100,9 s no teste) e uma conexão que não é *worker* (ex.:
       `Test-NetConnection` na porta 5000) é descartada em vez de derrubar o coordenador
@@ -388,3 +391,7 @@ onde cada um marca as suas tarefas.
   "perda de linearidade" e "efeito de cache", que os dados não sustentam. A Tabela 1 do relatório
   continua em 3.11.7, como toda a bateria do i9 (sem tempo para remedir), e o texto passou a citar
   os valores em 3.12.10 (4,27 / 19,07 / 73,58 s) e a dizer que as medições usaram 3.11 e 3.12.
+- **23 nov. 2026**: bateria da distribuída em 4 máquinas (notVini, PCrafa, NoteBook_Arthur e
+  torezan-pc) rodada com `medir_rede.py`, rede Wi-Fi. Resultados em
+  `experimentos/resultados/rede/` (`medicoes.csv`, `sequencial_maquinas.csv` e
+  `ambiente_maquinas.csv`); todas as 147 execuções distribuídas conferem com a sequencial.
