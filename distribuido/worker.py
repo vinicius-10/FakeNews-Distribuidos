@@ -80,8 +80,14 @@ def trocar_bordas(atual, colunas, altura, acima, abaixo, rank, bits):
 
 
 def executar_worker(host_coordenador, porta_coordenador, escutar="127.0.0.1",
-                    timeout=p.TIMEOUT_PADRAO):
-    """Conecta ao coordenador, recebe a faixa e executa as gerações."""
+                    timeout=p.TIMEOUT_PADRAO, ordem=None):
+    """
+    Conecta ao coordenador, recebe a faixa e executa as gerações.
+
+    `ordem` (opcional) pede uma posição na cadeia: o coordenador dá as faixas
+    de cima para baixo em ordem crescente de `ordem`. Sem ela, vale a ordem de
+    chegada. Devolve o rank e a faixa recebidos (usado pelos testes).
+    """
     # A porta de escuta (para o vizinho de cima) é aberta antes de falar com o
     # coordenador; porta 0 deixa o sistema escolher uma livre.
     ouvinte = p.criar_servidor(escutar, 0, fila=1)
@@ -90,7 +96,10 @@ def executar_worker(host_coordenador, porta_coordenador, escutar="127.0.0.1",
     acima = abaixo = None
     try:
         coordenador = p.conectar(host_coordenador, porta_coordenador, timeout)
-        p.enviar_json(coordenador, p.OLA, {"porta_halo": ouvinte.getsockname()[1]})
+        ola = {"porta_halo": ouvinte.getsockname()[1]}
+        if ordem is not None:
+            ola["ordem"] = ordem
+        p.enviar_json(coordenador, p.OLA, ola)
         _, cfg = p.receber_json(coordenador, p.INICIO)
         rank, colunas = cfg["rank"], cfg["colunas"]
         altura = cfg["fim"] - cfg["inicio"]
@@ -144,6 +153,7 @@ def executar_worker(host_coordenador, porta_coordenador, escutar="127.0.0.1",
         p.enviar_json(coordenador, p.RESULTADO, {
             "rank": rank, "calculo": calculo, "comunicacao": comunicacao,
             "espera": espera, "bytes_enviados": bytes_enviados})
+        return {"rank": rank, "inicio": cfg["inicio"], "fim": cfg["fim"]}
     finally:
         for sock in (acima, abaixo, coordenador, ouvinte):
             if sock is not None:
@@ -157,9 +167,14 @@ def main(argv=None):
     parser.add_argument("--escutar", default="127.0.0.1",
                         help="endereço para o vizinho se conectar (0.0.0.0 entre máquinas)")
     parser.add_argument("--timeout", type=float, default=p.TIMEOUT_PADRAO)
+    parser.add_argument("--ordem", type=int,
+                        help="posição na cadeia (0 = faixa de cima); sem ela, vale a "
+                             "ordem de chegada no coordenador")
     args = parser.parse_args(argv)
+    if args.ordem is not None and args.ordem < 0:
+        parser.error("--ordem não pode ser negativa")
     host, _, porta = args.coordenador.rpartition(":")
-    executar_worker(host, int(porta), args.escutar, args.timeout)
+    executar_worker(host, int(porta), args.escutar, args.timeout, ordem=args.ordem)
 
 
 if __name__ == "__main__":

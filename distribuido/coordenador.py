@@ -58,8 +58,18 @@ def validar_workers(parametros, workers):
 
 
 def _receber_ola(conexao, timeout_ola):
+    """Lê o OLA e devolve só a `porta_halo` (ver `_ler_ola`)."""
+    return _ler_ola(conexao, timeout_ola)[0]
+
+
+def _ler_ola(conexao, timeout_ola):
     """
-    Lê o OLA de uma conexão recém-aceita e devolve a `porta_halo` do worker.
+    Lê o OLA de uma conexão recém-aceita e devolve (`porta_halo`, `ordem`).
+
+    `ordem` é opcional (None se o worker não mandar): quando vem, o
+    coordenador distribui as faixas por ela em vez da ordem de chegada. É o que
+    a medição em rede usa para que cada máquina fique sempre com a mesma faixa
+    em todas as repetições.
 
     Qualquer outra coisa (conexão fechada, silêncio além de `timeout_ola`, tipo
     de mensagem errado, JSON ou UTF-8 inválido, porta ausente ou fora de
@@ -77,7 +87,11 @@ def _receber_ola(conexao, timeout_ola):
     # bool é subclasse de int em Python: True não pode passar por porta 1.
     if isinstance(porta, bool) or not isinstance(porta, int) or not 1 <= porta <= 65535:
         raise p.ErroProtocolo(f"OLA sem porta_halo válida: {ola!r}"[:200])
-    return porta
+    ordem = ola.get("ordem")
+    if ordem is not None and (isinstance(ordem, bool) or not isinstance(ordem, int)
+                              or ordem < 0):
+        raise p.ErroProtocolo(f"OLA com ordem inválida: {ola!r}"[:200])
+    return porta, ordem
 
 
 def executar_coordenador(parametros, servidor, workers, bits=False, mostrar=True,
@@ -118,15 +132,17 @@ def executar_coordenador(parametros, servidor, workers, bits=False, mostrar=True
     if mostrar:
         print(f"Aguardando {workers} worker(s); cada um é avisado assim que conecta...")
     try:
-        # 1. Conexão dos workers; o rank é a ordem de chegada. Uma conexão que
-        #    não manda um OLA válido é fechada e não gasta um rank.
+        # 1. Conexão dos workers. O rank é a ordem de chegada, a não ser que os
+        #    workers mandem `ordem` no OLA (ver o passo 1b). Uma conexão que não
+        #    manda um OLA válido é fechada e não gasta um rank.
         enderecos = []
+        ordens = []
         while len(conexoes) < workers:
             rank = len(conexoes)
             with _contexto(f"aceitar conexão do worker {rank}"):
                 conexao, (host, porta_origem) = servidor.accept()
             try:
-                porta_halo = _receber_ola(conexao, min(timeout_ola, timeout))
+                porta_halo, ordem = _ler_ola(conexao, min(timeout_ola, timeout))
             except p.ErroProtocolo as erro:
                 conexao.close()
                 if mostrar:
@@ -137,11 +153,22 @@ def executar_coordenador(parametros, servidor, workers, bits=False, mostrar=True
             conexoes.append(conexao)
             # O vizinho vai se conectar no IP de onde o worker veio, na porta que ele abriu.
             enderecos.append((host, porta_halo))
+            ordens.append(ordem)
             # `accept` espera até o timeout (600 s por padrão); avisar a cada
             # conexão evita a impressão de programa travado quando falta subir
             # um dos workers.
             if mostrar:
                 print(f"  worker {rank + 1}/{workers} conectado", flush=True)
+
+        # 1b. Quem mandou `ordem` fica na posição pedida (menor ordem = faixa de
+        #     cima); quem não mandou vem depois, na ordem de chegada. A
+        #     ordenação é estável, então sem nenhuma `ordem` nada muda. Conexões e
+        #     endereços são reordenados juntos: o endereço do vizinho de baixo
+        #     (passo 2) já sai certo.
+        sequencia = sorted(range(workers),
+                           key=lambda i: (ordens[i] is None, ordens[i] or 0, i))
+        conexoes = [conexoes[i] for i in sequencia]
+        enderecos = [enderecos[i] for i in sequencia]
 
         # Todos conectados: só agora o relógio do tempo total começa.
         inicio_total = time.perf_counter()
