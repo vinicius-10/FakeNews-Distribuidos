@@ -375,3 +375,10 @@ onde cada um marca as suas tarefas.
   sequencial e retoma de onde parou. O *worker* aceita `--ordem` e o coordenador distribui as
   faixas por ela (antes, pela ordem de chegada), então cada máquina fica sempre com a mesma faixa.
   Com a `main` atual, 96 testes (Windows e Linux/WSL).
+- **23 nov. 2026, 21:30**: capítulo de experimentos completo no Overleaf, só com dados do i9:
+  cenários (incluindo as baterias de gerações e de percentual × limiar), resultados da paralela
+  (tabela, Karp–Flatt e gráfico de *speedup*) e da distribuída, e as quatro análises. A paralela
+  em 2000² da bateria principal (versão anterior à janela local) ficou de fora; para essa grade
+  vale a bateria de gerações. Fundamentação ajustada para o i9 (8P + 8E). Os `\todo` da medição
+  entre máquinas viraram a frase de que ela não foi feita. Resta 1 `\todo`: a contribuição do
+  Arthur.
