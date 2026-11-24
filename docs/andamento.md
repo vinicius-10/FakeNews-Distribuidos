@@ -216,8 +216,16 @@ onde cada um marca as suas tarefas.
      tabelas da grade compacta, do perfil por fase e do efeito do modelo. Resta 1 `\todo`: o
      efeito de `--bits` no tempo entre 3 máquinas;
    - [x] introdução: motivação com referências;
-   - [ ] conclusão (6, com a tabela de contribuições dos quatro integrantes) e apêndice de
-     execução (2, com o registro do uso de IA);
+   - [x] conclusão (síntese, dificuldades, trabalhos futuros e tabela com os quatro integrantes,
+     montada a partir do histórico do git; falta a linha do Arthur, que não tem *commits*);
+   - [x] apêndice: requisitos, comandos das três versões, testes e experimentos, e o registro do
+     uso de IA (Claude Code e DeepSeek, por PR), do código externo e das bibliotecas;
+   - [x] experimentos: metodologia em "Cenários avaliados" (versões, tamanhos, repetições,
+     mediana, SHA-256, por que limiar 2);
+   - [ ] **10 `\todo` restantes**, todos dependentes das baterias finais ou do grupo: cenários
+     novos, resultados da paralela e da distribuída, as 4 análises, a medição entre 3 máquinas
+     (distribuída e melhoria 6) e a contribuição do Arthur; e o ajuste dos processadores na
+     fundamentação;
    - [ ] a fundamentação diz que "o processador utilizado neste trabalho" é o i7-13650HX, mas a
      bateria principal foi no i9-12900F (máquina A) e a comparação no i5-1240P (máquina B): ajustar
      o parágrafo dos núcleos P e E para as máquinas da `tab:ambiente`.
@@ -230,8 +238,7 @@ onde cada um marca as suas tarefas.
    - [x] bibliotecas: `PythonSocket` (citada na distribuída), `PythonMultiprocessing`,
      `PythonSharedMemory` e `Hunter2007` (matplotlib) prontas para citar;
    - [x] uso de IA: `AnthropicClaudeCode` e `DeepSeek` prontas para citar no apêndice;
-   - [ ] citar `PythonMultiprocessing`/`PythonSharedMemory` na paralela, `Hunter2007` nos
-     gráficos dos experimentos e as duas de IA no apêndice (só aparecem na lista se citadas).
+   - [x] todas as referências novas citadas (bibliotecas e IA no apêndice).
 9. [ ] **Slides** em PDF:
    - [ ] todos os tópicos do enunciado: problema, modelo, sequencial, paralela e distribuída,
      divisão da matriz, tabelas e gráficos, *speedup* e eficiência, dificuldades, melhorias,
@@ -343,3 +350,6 @@ onde cada um marca as suas tarefas.
   `main.bib`. Compilado sem erros nem citações indefinidas. Ficam 2 `\todo` que dependem da
   medição entre 3 máquinas.
 - **23 nov. 2026, 20:50**: Pessoa 3 confirmou o grupo (9) e o prazo (hoje, 23:59).
+- **23 nov. 2026, 21:00**: no Overleaf, conclusão, apêndice (execução e uso de IA) e metodologia dos
+  experimentos escritos; capa com a grafia "Benaci". Restam 10 `\todo`, que dependem das baterias
+  finais ou da contribuição do Arthur.
