@@ -13,9 +13,9 @@ arquivo** (tabela, checklist e histórico) no mesmo PR.
 | Sequencial refatorada | ✅ feita e testada | [`sequencial/fakenews_sequencial.py`](../sequencial/fakenews_sequencial.py) + [`comum/`](../comum/) |
 | Paralela (processos e threads) | ✅ feita e testada | [`paralelo/fakenews_paralelo.py`](../paralelo/fakenews_paralelo.py) |
 | Distribuída (sockets TCP) | ✅ feita e testada (localhost, interface de rede real e 3 máquinas) | [`distribuido/`](../distribuido/) |
-| Testes | ✅ 76 testes passando (Linux; 72 no Windows antes da revisão do PR #11): equivalência, protocolo, robustez, melhorias 2 e 3, saída, métricas, bateria | [`testes/`](../testes/) |
+| Testes | ✅ 83 testes passando (Windows e Linux): equivalência, protocolo, robustez, melhorias 2 e 3, saída, métricas, bateria, medição em rede | [`testes/`](../testes/) |
 | 6 melhorias | ✅ implementadas · ✅ medidas · ❌ não escritas no relatório | [seção 5](#5-melhorias-escolhidas) |
-| Experimentos de desempenho | ✅ medidos numa máquina (localhost) · 🔄 3 máquinas: conexão ok, falta medir | [`experimentos/`](../experimentos/) |
+| Experimentos de desempenho | ✅ medidos numa máquina (localhost) · 🔄 rede real: conexão ok em 3 máquinas, bateria de 4 máquinas pronta (`medir_rede.py`), falta rodar | [`experimentos/`](../experimentos/) |
 | Relatório (Overleaf) | 🔄 fundamentação e seção 3 (sequencial) escritas; o resto tem `\todo` | [`relatorio/`](../relatorio/) (cópia) |
 | Slides (PDF) | ❌ não começados | — |
 | Vídeo 10–15 min | ❌ não gravado | — |
@@ -236,9 +236,11 @@ onde cada um marca as suas tarefas.
       deu o mesmo resultado da sequencial (17.027 ignorantes e 22.973 inativos na geração 44).
       Tempo do laço 1,07 s, contra 0,36 s da sequencial: com grade pequena a rede domina
       (~24 ms por geração);
-    - [ ] **medir** entre 3 máquinas: 2000×2000 com repetições, 1 *worker* por máquina, com e sem
-      `--bits`, 2 *workers* por máquina, e os mesmos 3 *workers* em `localhost` para comparar
-      (custo da rede real);
+    - [ ] **medir** entre 4 máquinas (Vinicius, Rafael, Arthur e João): script pronto
+      (`experimentos/medir_rede.py` + `distribuido/agente.py`, roteiro em
+      [`ROTEIRO-medicao-4-maquinas.md`](../distribuido/rede/ROTEIRO-medicao-4-maquinas.md)):
+      sequencial em cada máquina, 1 a 4 máquinas × 1/2/4 *workers* em 1000² e 2000², 4000² e
+      `--bits` com as 4, gerações 10/20/40 e percentual × limiar; ~40 min. Falta rodar;
     - [x] coordenador: o `tempo_total` começa depois que o último *worker* conecta (antes
       incluía a espera, 100,9 s no teste) e uma conexão que não é *worker* (ex.:
       `Test-NetConnection` na porta 5000) é descartada em vez de derrubar o coordenador
@@ -304,3 +306,10 @@ onde cada um marca as suas tarefas.
   aponta 43 de 54 configurações acima de 1,10. "Variar gerações" voltou para pendente (as baterias
   usaram 20 gerações). O `cenarios.json` é só a lista dos cenários; nenhum script o lê. Suíte com
   76 testes (Linux, Python 3.12.16).
+- **23 nov. 2026**: medição em rede real com um comando (`feat/medicao-rede`). Cada máquina liga
+  `distribuido/agente.py`, que sobe os *workers* e roda a sequencial quando o coordenador pede; o
+  `experimentos/medir_rede.py` roda a bateria (sequencial em cada máquina, distribuída com 1 a N
+  máquinas × 1/2/4 *workers*, `--bits`, gerações, percentual e limiar), confere o hash com a
+  sequencial e retoma de onde parou. O *worker* aceita `--ordem` e o coordenador distribui as
+  faixas por ela (antes, pela ordem de chegada), então cada máquina fica sempre com a mesma faixa.
+  83 testes (Windows e Linux/WSL).
