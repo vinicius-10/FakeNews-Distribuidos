@@ -1,5 +1,9 @@
 # Teste da versão distribuída em 3 máquinas
 
+> **Para medir** (bateria com repetições em 4 máquinas, um comando só), use o
+> [`ROTEIRO-medicao-4-maquinas.md`](ROTEIRO-medicao-4-maquinas.md). Este guia serve para conferir
+> a conexão entre máquinas com uma execução feita à mão.
+
 Guia para rodar a simulação distribuída com o **PC como coordenador** e **um notebook como
 worker** de cada lado, na mesma rede local. Tudo aqui foi verificado nesta máquina em
 23/nov/2026 (Py 3.11.7 e 3.12.10).
