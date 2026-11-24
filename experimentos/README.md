@@ -52,7 +52,18 @@ python -m experimentos.bateria --simular
 python -m experimentos.bateria --percentuais 0.05 --limiares 2 --tamanhos 2000 \
     --repeticoes 3 --exportar-cenarios experimentos/resultados/bateria/cenarios-3-maquinas.json
 
-# 7) REDE REAL: distribuída em várias máquinas, com um comando só (cada máquina
+# 7) VERIFICAÇÃO DA SEÇÃO 3.4.2: reproduz as Tabelas 1 e 2 do trabalho e compara
+#    com os valores publicados (tempo do código do professor por tamanho de grade
+#    e divisão do tempo de uma geração entre varredura, cópia e contagem).
+#    PADRÃO DO PROJETO: Python 3.12. A versão importa: em 3.12 o código do
+#    professor fica mais lento e a Tabela 1 (publicada em 3.11.7) não reproduz —
+#    o custo por célula cresce de 0,88 para 1,02 µs da grade de 500² para 2000².
+#    A Tabela 2 (publicada em 3.12.10) reproduz dentro de 2%. O script avisa
+#    quando roda em outra versão.
+py -3.12 -m experimentos.verificar_342
+py -3.12 -m experimentos.verificar_342 --tabela 2     # só a Tabela 2
+
+# 8) REDE REAL: distribuída em várias máquinas, com um comando só (cada máquina
 #    liga `python -m distribuido.agente --coordenador IP:5000 --posicao N`).
 #    Sequencial em cada máquina, 1 a N máquinas x 1/2/4 workers, --bits e
 #    gerações/percentual/limiar; retoma de onde parou. Roteiro do dia em
