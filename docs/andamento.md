@@ -58,6 +58,10 @@ Decisões principais:
   imprime e decide se continua; B, os *workers* esperam a decisão; depois todos trocam os buffers.
 - Sem condição de corrida: cada *worker* escreve só as suas linhas e a sua posição de `contagens`.
 - Timeout de 600 s nas barreiras (uma barreira presa vira erro em vez de travar).
+- **Janela local**: cada *worker* calcula num `bytearray` com a sua faixa + 1 linha vizinha de cada
+  lado (recarrega só essas 2 linhas a cada geração) e devolve as suas linhas ao bloco compartilhado.
+  Com 1 *worker* (i7-13650HX), o *speedup* sobre a sequencial passou de 0,82 (1000²) e 0,78 (2000²)
+  para 0,95 nas duas grades.
 
 ## 3. Versão distribuída
 
@@ -167,7 +171,10 @@ onde cada um marca as suas tarefas.
    - [x] gravar a **configuração da máquina** em `resultados/ambiente.csv` (i9-12900F, 16 núcleos
      físicos / 24 lógicos, 31,8 GB, Windows, Python 3.11.7, desktop na tomada);
    - [x] calcular **speedup** e **eficiência** sobre `tempo_laco` e `tempo_total`;
-   - [x] fração serial de **Karp–Flatt**, limite de Amdahl e Gustafson.
+   - [x] fração serial de **Karp–Flatt**, limite de Amdahl e Gustafson;
+   - [ ] **refazer a paralela em 2000²**: a linha de `tabelas.md` (0,85 com 1 *worker*) bate com a
+     versão anterior à janela local, então os *speedups* da paralela nessa grade estão
+     subestimados (a de 1000² já foi medida com a versão atual).
 3. [x] **Medir as melhorias de desempenho** (`resultados/tabelas.md`, `perfis.md`):
    - grade compacta × original (`deepcopy`): **3,3× a 3,5×** mais rápida com 1 trabalhador;
    - `--bits`: *halo* de ~1.921 para ~281 bytes por *worker* por geração (16 *workers*, 1000²),
@@ -340,6 +347,10 @@ onde cada um marca as suas tarefas.
   aponta 43 de 54 configurações acima de 1,10. "Variar gerações" voltou para pendente (as baterias
   usaram 20 gerações). O `cenarios.json` é só a lista dos cenários; nenhum script o lê. Suíte com
   76 testes (Linux, Python 3.12.16).
+- **23 nov. 2026**: seção 4 do relatório (versão paralela) escrita, com fluxograma do principal e
+  dos *workers* e figura da divisão em faixas. A janela local foi medida de novo no i7-13650HX
+  (versão antiga × atual, 1 *worker*); a medição mostrou que a paralela em 2000² de `tabelas.md`
+  é da versão anterior à janela e precisa ser refeita.
 - **23 nov. 2026**: revisão da `main` depois dos PRs #10 e #11 (`a9bf8f8`). 76 testes OK no Linux
   (Python 3.12 e 3.14). Código conferido contra as restrições: sem bibliotecas proibidas no
   cálculo, `spawn` explícito, *timeout* em toda espera, sem `SO_REUSEADDR`, `encoding` em todo
