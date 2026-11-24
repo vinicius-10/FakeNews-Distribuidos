@@ -172,6 +172,14 @@ onde cada um marca as suas tarefas.
      paralela e na distribuída; 3 na do professor, que é a mais lenta);
    - [x] gravar a **configuração da máquina** em `resultados/ambiente.csv` (i9-12900F, 16 núcleos
      físicos / 24 lógicos, 31,8 GB, Windows, Python 3.11.7, desktop na tomada);
+   - [x] **versão do Python da bateria do i9**: `ambiente.csv`, `medicoes_*.csv` e `bateria/`
+     foram medidos em 3.11.7, e a versão pesa (o código do professor ficou de 3% a 16% mais lento
+     em 3.12.10:
+     [`resultados/3.4.2-resumo-para-o-grupo.md`](../experimentos/resultados/3.4.2-resumo-para-o-grupo.md)).
+     Sem tempo para remedir antes da entrega, os dados ficaram e o relatório declara 3.11.7 para a
+     Máquina A (tabela de ambiente, Tabela 1 da 3.4.2 e fundamentação). Se for remedir um dia:
+     comandos 1 a 6 do [`experimentos/README.md`](../experimentos/README.md) com `py -3.12`, todos
+     de uma vez (não trocar só o `medicoes_professor.csv`, linha de base dos *speedups*);
    - [x] calcular **speedup** e **eficiência** sobre `tempo_laco` e `tempo_total`;
    - [x] fração serial de **Karp–Flatt**, limite de Amdahl e Gustafson;
    - [ ] **refazer a paralela em 2000²**: a linha de `tabelas.md` (0,85 com 1 *worker*) bate com a
@@ -375,3 +383,8 @@ onde cada um marca as suas tarefas.
   sequencial e retoma de onde parou. O *worker* aceita `--ordem` e o coordenador distribui as
   faixas por ela (antes, pela ordem de chegada), então cada máquina fica sempre com a mesma faixa.
   Com a `main` atual, 96 testes (Windows e Linux/WSL).
+- **23 nov. 2026**: verificação da seção 3.4.2 corrigida (`fix/verificar-342`): o total da
+  Tabela 2 passou a incluir a contagem (0,974 s; 77,9 / 17,7 / 4,4%) e saíram as conclusões de
+  "perda de linearidade" e "efeito de cache", que os dados não sustentam. A Tabela 1 do relatório
+  continua em 3.11.7, como toda a bateria do i9 (sem tempo para remedir), e o texto passou a citar
+  os valores em 3.12.10 (4,27 / 19,07 / 73,58 s) e a dizer que as medições usaram 3.11 e 3.12.

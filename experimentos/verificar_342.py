@@ -6,7 +6,9 @@ O que cada tabela mede (conforme o texto do trabalho)
 Tabela 1: tempo do laço de gerações do **código fornecido** (o do professor,
 `sequencial_original`, com `deepcopy` por geração) em três tamanhos de grade,
 com 20 gerações, 5% de espalhadores e limiar 2, sem impressão. Mediana de
-três repetições. Aferida num i9-12900F, Windows 11, Python 3.11.7.
+três repetições. Publicada com os valores da Máquina A (i9-12900F, Windows 11,
+Python 3.11.7), a mesma versão de toda a bateria principal; o relatório cita à
+parte os valores deste script no mesmo i9 em Python 3.12.10.
 
 Tabela 2: como o tempo de **uma** geração (1000×1000, mesmos parâmetros) se
 divide entre varredura das células, cópia da grade e contagem de estados.
@@ -17,18 +19,21 @@ A decomposição da Tabela 2 segue o que o texto descreve: o `deepcopy` acontece
 dentro de `proxima_geracao` e o código fornecido não foi alterado, então a
 cópia é medida **à parte**, sobre a mesma grade, e o tempo da varredura sai por
 **diferença** (`proxima_geracao` − cópia). A contagem é medida isolada sobre a
-grade nova. Os totais são divididos pelo número de gerações para dar "por
-geração".
+grade nova. O total da geração é a soma das três etapas
+(`proxima_geracao` + contagem), como na tabela publicada. Os totais são
+divididos pelo número de gerações para dar "por geração".
 
-Versão do interpretador (importa, e muito)
-------------------------------------------
+Versão do interpretador
+-----------------------
 O padrão de execução é **Python 3.12**, e o script avisa quando roda em outra
-versão. A versão não é detalhe: em 3.12 o código do professor fica mais lento
-que em 3.11, e o efeito **cresce com o tamanho da grade** — o custo por célula
-vai de ~0,88 µs na grade de 500² a ~1,02 µs na de 2000² (+16%). Consequência:
-a Tabela 1, publicada em 3.11.7, **não se reproduz em 3.12** (chega a +24% em
-2000²), enquanto a Tabela 2, publicada em 3.12.10, reproduz dentro de 2%.
-Registre sempre a versão junto do número.
+versão. A versão pesa: no mesmo i9, o código do professor ficou de 3% a 16%
+mais lento em 3.12.10 do que em 3.11.7 (4,27 / 19,07 / 73,58 s contra
+4,16 / 16,46 / 65,88 s). Registre sempre a versão junto do número e só compare
+tempos medidos na mesma máquina, com a mesma versão.
+
+Ruído: com 3 repetições, a grade de 2000² variou cerca de 10% entre duas
+rodadas completas (73,6 s e 81,5 s). Diferenças menores que isso no custo por
+célula não bastam para afirmar que o custo deixou de ser linear.
 
 Como usar
 ---------
@@ -56,11 +61,15 @@ from sequencial import fakenews_sequencial_original as professor  # noqa: E402
 
 # Valores publicados no trabalho (seção 3.4.2). Servem de referência para o
 # desvio; não são usados em nenhum cálculo.
+# Tabela 1: i9-12900F, Windows 11, Python 3.11.7 (rodando em 3.12, o desvio
+# inclui o efeito da versão: o relatório cita 4,27 / 19,07 / 73,58 s em 3.12.10).
 PUBLICADO_TABELA1 = {
     500: {"tempo": 4.16, "por_geracao": 0.208, "por_celula_us": 0.83},
     1000: {"tempo": 16.46, "por_geracao": 0.823, "por_celula_us": 0.82},
     2000: {"tempo": 65.88, "por_geracao": 3.294, "por_celula_us": 0.82},
 }
+# Tabela 2: i7-13650HX, Windows 11, Python 3.12.10 (outra máquina: compare só
+# a proporção entre as etapas, não o valor absoluto).
 PUBLICADO_TABELA2 = {
     "varredura": 0.638,
     "copia": 0.179,
@@ -74,9 +83,7 @@ LIMIAR = 2
 SEMENTE = 42
 
 # Versão de Python de referência para as medições deste projeto: **3.12**.
-# É a versão do ambiente do grupo e a que o artigo usou na Tabela 2. A Tabela 1
-# do artigo foi medida em 3.11.7, então o desvio dela aqui inclui o efeito da
-# troca de interpretador — não é só ruído de máquina.
+# A Tabela 2 publicada foi medida em 3.12.10; a Tabela 1, em 3.11.7.
 VERSAO_PADRAO = "3.12"
 
 
@@ -90,9 +97,9 @@ def aviso_de_versao(versao=None):
     if atual.split(".")[:2] == VERSAO_PADRAO.split("."):
         return None
     return (f"⚠️  Python {atual} — o padrão do projeto é {VERSAO_PADRAO}. "
-            "O custo das etapas muda com o interpretador: em 3.12 a varredura "
-            "pesa mais e a cópia menos do que em 3.11. Rode com 3.12 para "
-            "comparar com a Tabela 2 do artigo.")
+            "O tempo do código do professor muda com o interpretador (em 3.11.7 "
+            "foi de 3% a 16% mais rápido que em 3.12.10 no mesmo i9). Rode com "
+            "3.12, a versão padrão do projeto.")
 
 
 
@@ -191,7 +198,9 @@ def medir_tabela2(tamanho=1000, repeticoes=5, aquecimento=1):
             t_contagem = time.perf_counter() - inicio
 
             copia += t_copia
-            total += t_total
+            # O total da geração inclui a contagem, como na tabela publicada
+            # (varredura + cópia + contagem = total).
+            total += t_total + t_contagem
             varredura += t_total - t_copia
             contagem_s += t_contagem
             executadas += 1
@@ -302,8 +311,9 @@ def main(argv=None):
                       f"Mediana de {args.repeticoes} repetições, após aquecimento. "
                       f"Medido em {duracao:.0f} s.", "",
                       _tabela1_md(tabela1), "",
-                      f"Publicado: 4,16 s / 16,46 s / 65,88 s para 500², 1000² e 2000², "
-                      f"com 0,82–0,83 µs por célula e geração.", ""]
+                      "Publicado (i9-12900F, Python 3.11.7): 4,16 s / 16,46 s / "
+                      "65,88 s para 500², 1000² e 2000², com 0,82–0,83 µs por "
+                      "célula e geração.", ""]
 
     if args.tabela in ("2", "ambas"):
         inicio = time.perf_counter()
@@ -325,9 +335,9 @@ def main(argv=None):
                    for t in tabela1 if t in PUBLICADO_TABELA1]
         maior_desvio = max(abs(d) for d in desvios) if desvios else None
         por_celula = [tabela1[t]["por_celula_us"] for t in sorted(tabela1)]
-        # Critério RELATIVO. A amplitude absoluta engana: 0,14 µs parece pouco,
-        # mas sobre 0,88 µs é 16% de variação — e é justamente o que aparece em
-        # Python 3.12 na grade maior, onde a localidade de cache piora.
+        # Critério relativo: variação do custo por célula entre os tamanhos.
+        # Até 10% fica dentro do ruído observado entre rodadas (a grade de
+        # 2000² variou ~10% com 3 repetições), então não indica não linearidade.
         menor_celula, maior_celula = min(por_celula), max(por_celula)
         variacao_relativa = ((maior_celula - menor_celula) / menor_celula * 100
                              if menor_celula else 0.0)
@@ -345,8 +355,8 @@ def main(argv=None):
         relatorio.append(
             f"  Custo por célula e geração: {lista_celula} µs — "
             f"{'permanece estável' if estavel else 'variou'} "
-            f"({variacao_relativa:.0f}% entre o menor e o maior tamanho). "
-            f"{'Confirma a linearidade em L·C que o texto afirma.' if estavel else 'A linearidade em L·C NÃO se confirmou neste ambiente: a grade maior ficou proporcionalmente mais cara (efeito de cache).'}")
+            f"({variacao_relativa:.0f}% entre o menor e o maior valor). "
+            f"{'Compatível com o crescimento linear em L·C.' if estavel else 'Variação acima do ruído esperado: repita com mais repetições antes de concluir que o custo deixou de ser linear em L·C.'}")
     if tabela2:
         desvio_total = _desvio(tabela2["total"], PUBLICADO_TABELA2["total"])
         total = tabela2["total"] or 1

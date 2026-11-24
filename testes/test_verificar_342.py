@@ -76,6 +76,7 @@ class TestReferenciasPublicadas(unittest.TestCase):
     """As referências do trabalho não podem ser alteradas por acidente."""
 
     def test_tabela1_publicada(self):
+        """Tabela 1 do relatório: i9-12900F, Python 3.11.7."""
         self.assertAlmostEqual(v.PUBLICADO_TABELA1[500]["tempo"], 4.16)
         self.assertAlmostEqual(v.PUBLICADO_TABELA1[1000]["tempo"], 16.46)
         self.assertAlmostEqual(v.PUBLICADO_TABELA1[2000]["tempo"], 65.88)
@@ -85,6 +86,16 @@ class TestReferenciasPublicadas(unittest.TestCase):
                   + v.PUBLICADO_TABELA2["contagem"])
         # Publicado: 0,638 + 0,179 + 0,038 = 0,855.
         self.assertAlmostEqual(etapas, v.PUBLICADO_TABELA2["total"], places=3)
+
+
+class TestTotalDaTabela2(unittest.TestCase):
+    """O total medido tem que incluir a contagem, como na tabela publicada."""
+
+    def test_total_e_a_soma_das_tres_etapas(self):
+        resultado = v.medir_tabela2(tamanho=40, repeticoes=1, aquecimento=0)
+        etapas = resultado["varredura"] + resultado["copia"] + resultado["contagem"]
+        # Com uma única repetição, a mediana é o próprio valor: a soma fecha.
+        self.assertAlmostEqual(etapas, resultado["total"], places=9)
 
 
 class TestAvisoDeVersao(unittest.TestCase):
